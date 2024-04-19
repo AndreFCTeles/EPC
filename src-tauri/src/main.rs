@@ -2,10 +2,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use csv_parsing::parse_csv;
+use data_fetcher::filtered_data_fetcher;
 use get_data::data_fetcher;
 use process_data::process_and_save_data;
 
 mod csv_parsing;
+mod data_fetcher;
 mod data_structures;
 mod get_data;
 mod json_handling;
@@ -20,7 +22,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             parse_csv,
             process_and_save_data,
-            data_fetcher
+            data_fetcher,
+            filtered_data_fetcher
         ])
         // Setup and run the Tauri application.
         .run(tauri::generate_context!())

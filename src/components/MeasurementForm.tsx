@@ -6,7 +6,6 @@
 import React, { useState, useEffect } from 'react';
 // Mantine
 import { 
-   Select,
    Box, 
    Button, 
    Checkbox, 
@@ -53,6 +52,11 @@ interface MeasureFormData {
    vFio: number | string;
    data?: Date | string;
 }
+// Fetching
+interface fetchedDataObject {
+   value: string;
+   label: string;
+}
 
 /* |------------| */
 /* | COMPONENTE | */
@@ -68,9 +72,11 @@ const MeasurementForm: React.FC = () => {
    const formatData = (d:Date) => dayjs(d).format("DD/MMMM/YYYY HH:mm");
    // Data states
    const [files, setFiles] = useState<FileWithContentAndCheck[]>([]); 
-   const [selClientes, setSelClientes] = useState<Array<{value: string, label: string}>>([]);
-   const [selMaquinas, setSelMaquinas] = useState<Array<{value: string, label: string}>>([]);
-   const [selNSerie, setSelNSerie] = useState<Array<{value: string, label: string}>>([]);
+   const [selClientes, setSelClientes] = useState<string[]>([]);
+   const [selMaquinas, setSelMaquinas] = useState<string[]>([]);
+   const [selNSerie, setSelNSerie] = useState<string[]>([]);
+   //const [maqNSer, setMaqNSer] = useState<Array<fetchedDataObject>>([]);
+
    // Interface states
    const atLeastFiveFilesChecked = files.filter(file => file.checked).length === 5;
    const submitButtonEnabled = files.length === 5 || atLeastFiveFilesChecked;
@@ -94,21 +100,26 @@ const MeasurementForm: React.FC = () => {
    const [searchNSerie, setSearchNSerie] = useState('');
    // Combobox setup
    const comboboxCliente = useCombobox({
-      onDropdownClose: () => {
-         if (!selClientes.some(c => c.label === searchCliente)) { setSearchCliente(''); }
-         comboboxCliente.resetSelectedOption();
-      },
-   });
+      onDropdownClose: () => {{
+         // Ensure the input value is retained if it does not match any options
+         const exactMatch = selClientes.find(c => c.toLowerCase() === searchCliente.toLowerCase());
+         if (!exactMatch && searchCliente !== "") { form.setFieldValue('cliente', searchCliente); }
+      }
+   }});
    const comboboxMaquina = useCombobox({
       onDropdownClose: () => {
-         if (!selMaquinas.some(c => c.label === searchMaquina)) { setSearchMaquina(''); }
-         comboboxMaquina.resetSelectedOption();
+         const exactMatch = selMaquinas.find(m => m.toLowerCase() === searchMaquina.toLowerCase());
+         if (!exactMatch && searchMaquina !== "") { form.setFieldValue('maquina', searchMaquina); }
+         //if (!selMaquinas.some(m => m === searchMaquina)) { setSearchMaquina(''); }
+         //comboboxMaquina.resetSelectedOption();
       },
    });
    const comboboxNSerie = useCombobox({ 
       onDropdownClose: () => {
-         if (!selMaquinas.some(c => c.label === searchNSerie)) { setSearchNSerie(''); }
-         comboboxNSerie.resetSelectedOption();
+         const exactMatch = selNSerie.find(ns => ns.toLowerCase() === searchNSerie.toLowerCase());
+         if (!exactMatch && searchNSerie !== "") { form.setFieldValue('nSerie', searchNSerie); }
+         //if (!selNSerie.some(ns => ns === searchNSerie)) { setSearchNSerie(''); }
+         //comboboxNSerie.resetSelectedOption();
       },
    });
 
@@ -139,16 +150,16 @@ const MeasurementForm: React.FC = () => {
                </Table.Thead>
                <Table.Tbody>
                   {files.map((file, index) => (
-                  <Table.Tr key={index}>
-                     <Table.Td>
-                        <Checkbox
-                        aria-label={`Select ${file.label}`}
-                        checked={file.checked}
-                        onChange={() => toggleFileCheck(index)}
-                        />
-                     </Table.Td>
-                     <Table.Td>{file.label}</Table.Td>
-                  </Table.Tr>
+                     <Table.Tr key={index}>
+                        <Table.Td>
+                           <Checkbox
+                           aria-label={`Select ${file.label}`}
+                           checked={file.checked}
+                           onChange={() => toggleFileCheck(index)}
+                           />
+                        </Table.Td>
+                        <Table.Td>{file.label}</Table.Td>
+                     </Table.Tr>
                   ))}
                </Table.Tbody>
             </Table>
@@ -185,6 +196,7 @@ const MeasurementForm: React.FC = () => {
                title: 'Aviso',
                message: 'Por favor, selecione 5 ficheiros de medição para continuar.',
                color: 'red',
+               // onClose: return to DataTable.tsx component
          });
          return;
       }
@@ -283,31 +295,11 @@ const MeasurementForm: React.FC = () => {
    // Effect for fetching
    useEffect(() => {
       // Fetch clientes
-      fetchData('selClientes').then((data: string[]) => {
-         const formattedData = data.map(slecli => ({
-            value: slecli,
-            label: slecli
-         }));
-         setSelClientes(formattedData);
-      });
-
+      fetchData('selClientes').then((data) => { setSelClientes(data.map((slecli: fetchedDataObject) => slecli.label)); });
       // Fetch maquinas
-      fetchData('selMaquinas').then((data: string[]) => {
-         const formattedData = data.map(selmaq => ({
-            value: selmaq,
-            label: selmaq
-         }));
-         setSelMaquinas(formattedData);
-      });
-
+      fetchData('selMaquinas').then((data) => { setSelMaquinas(data.map((selmaq: fetchedDataObject) => selmaq.label)); });
       // Fetch series -- assuming you have a similar setup for series
-      fetchData('selNSerie').then((data: string[]) => {
-         const formattedData = data.map(selns => ({
-            value: selns,
-            label: selns
-         }));
-         setSelNSerie(formattedData);
-      });
+      fetchData('selNSerie').then((data: string[]) => { setSelNSerie(data.map((selns:string) => selns)); });
    }, []);   
 
    /* |-----| */
@@ -326,8 +318,8 @@ const MeasurementForm: React.FC = () => {
                      store={comboboxCliente}
                      onOptionSubmit={(val) => {
                         form.setFieldValue('cliente', val);
+                        setSearchCliente(val);
                         comboboxCliente.closeDropdown();
-                        setSearchCliente('');
                      }}>
                         <Combobox.Target>
                            <InputBase
@@ -340,29 +332,28 @@ const MeasurementForm: React.FC = () => {
                               onClick={() => comboboxCliente.openDropdown()}
                               onFocus={() => comboboxCliente.openDropdown()}
                               onChange={(event) => {
-                                 comboboxCliente.openDropdown();
                                  setSearchCliente(event.currentTarget.value);
+                                 comboboxCliente.openDropdown();
                               }}
                               onBlur={() => {
-                                 const exactMatch = selClientes.find(c => c.label.toLowerCase() === searchCliente.toLowerCase());
-                                 setSearchCliente(exactMatch ? exactMatch.label : '');
-                                 comboboxCliente.closeDropdown();
+                                 const exactMatch = selClientes.find(c => c.toLowerCase() === searchCliente.toLowerCase());
+                                 if (exactMatch) { setSearchCliente(exactMatch); } 
+                                 else { form.setFieldValue('cliente', searchCliente); }
+                                 comboboxMaquina.closeDropdown();
                               }}
                            />
                         </Combobox.Target>
                         <Combobox.Dropdown>
                            <Combobox.Options>
                               {selClientes.length === 0 && (
-                                 <Combobox.Option value="no-data" disabled>
-                                    Não foram encontrados clientes. Criar novo?
-                                 </Combobox.Option>
+                                 <Combobox.Option value="no-data" disabled>Não foram encontrados clientes. Criar novo?</Combobox.Option>
                               )}
                               {selClientes
-                              .filter(item => item.label.toLowerCase().includes(searchCliente.toLowerCase()))
-                              .map(item => ( <Combobox.Option value={item.label} key={item.value}>{item.label}</Combobox.Option> ))}
-                              {searchCliente && !selClientes.some(item => item.label.toLowerCase() === searchCliente.toLowerCase()) && (
+                              .filter(item => item.toLowerCase().includes(searchCliente.toLowerCase()))
+                              .map(item => ( <Combobox.Option value={item} key={item}>{item}</Combobox.Option> ))}
+                              {/* searchCliente && !selClientes.some(item => item.toLowerCase() === searchCliente.toLowerCase()) && (
                                  <Combobox.Option value="$create">+ Criar "{searchCliente}"</Combobox.Option>
-                              )}
+                              ) */}
                            </Combobox.Options>
                         </Combobox.Dropdown>
                      </Combobox>
@@ -388,8 +379,8 @@ const MeasurementForm: React.FC = () => {
                      store={comboboxMaquina}
                      onOptionSubmit={(val) => {
                         form.setFieldValue('maquina', val);
+                        setSearchMaquina(val);
                         comboboxMaquina.closeDropdown();
-                        setSearchMaquina('');
                      }}>
                         <Combobox.Target>
                            <InputBase
@@ -402,12 +393,13 @@ const MeasurementForm: React.FC = () => {
                               onClick={() => comboboxMaquina.openDropdown()}
                               onFocus={() => comboboxMaquina.openDropdown()}
                               onChange={(event) => {
-                                 comboboxMaquina.openDropdown();
                                  setSearchMaquina(event.currentTarget.value);
+                                 comboboxMaquina.openDropdown();
                               }}
                               onBlur={() => {
-                                 const exactMatch = selMaquinas.find(m => m.label.toLowerCase() === searchMaquina.toLowerCase());
-                                 setSearchMaquina(exactMatch ? exactMatch.label : '');
+                                 const exactMatch = selMaquinas.find(m => m.toLowerCase() === searchMaquina.toLowerCase());
+                                 if (exactMatch) { setSearchMaquina(exactMatch); } 
+                                 else { form.setFieldValue('maquina', searchMaquina); }
                                  comboboxMaquina.closeDropdown();
                               }}
                            />
@@ -418,11 +410,11 @@ const MeasurementForm: React.FC = () => {
                                  <Combobox.Option value="no-data" disabled>Não foram encontradas máquinas. Criar nova?</Combobox.Option>
                               )}
                               {selMaquinas
-                              .filter(item => item.label.toLowerCase().includes(searchMaquina.toLowerCase()))
-                              .map(item => (<Combobox.Option value={item.label} key={item.value}>{item.label}</Combobox.Option>))}
-                              {searchMaquina && !selMaquinas.some(item => item.label.toLowerCase() === searchMaquina.toLowerCase()) && (
+                              .filter(item => item.toLowerCase().includes(searchMaquina.toLowerCase()))
+                              .map(item => (<Combobox.Option value={item} key={item}>{item}</Combobox.Option>))}
+                              {/* searchMaquina && !selMaquinas.some(item => item.toLowerCase() === searchMaquina.toLowerCase()) && (
                                  <Combobox.Option value="$create">+ Criar "{searchMaquina}"</Combobox.Option>
-                              )}
+                              ) */}
                            </Combobox.Options>
                         </Combobox.Dropdown>
                      </Combobox>
@@ -433,8 +425,8 @@ const MeasurementForm: React.FC = () => {
                      store={comboboxNSerie}
                      onOptionSubmit={(val) => {
                         form.setFieldValue('nSerie', val);
+                        setSearchNSerie(val);
                         comboboxNSerie.closeDropdown();
-                        setSearchNSerie('');
                      }}>
                         <Combobox.Target>
                            <InputBase
@@ -451,8 +443,9 @@ const MeasurementForm: React.FC = () => {
                                  setSearchNSerie(event.currentTarget.value);
                               }}
                               onBlur={() => {
-                                 const exactMatch = selNSerie.find(ns => ns.label.toLowerCase() === searchNSerie.toLowerCase());
-                                 setSearchNSerie(exactMatch ? exactMatch.label : '');
+                                 const exactMatch = selNSerie.find(ns => ns.toLowerCase() === searchNSerie.toLowerCase());
+                                 if (exactMatch) { setSearchNSerie(exactMatch); } 
+                                 else { form.setFieldValue('nSerie', searchNSerie); }
                                  comboboxNSerie.closeDropdown();
                               }}
                            />
@@ -463,11 +456,11 @@ const MeasurementForm: React.FC = () => {
                                  <Combobox.Option value="no-data" disabled>Não foram encontrados números de série em memória.</Combobox.Option>
                               )}
                               {selNSerie
-                              .filter(item => item.label.toLowerCase().includes(searchNSerie.toLowerCase()))
-                              .map(item => (<Combobox.Option value={item.label} key={item.value}>{item.label}</Combobox.Option>))}
-                              {searchNSerie && !selNSerie.some(item => item.label.toLowerCase() === searchNSerie.toLowerCase()) && (
+                              .filter(item => item.toLowerCase().includes(searchNSerie.toLowerCase()))
+                              .map(item => (<Combobox.Option value={item} key={item}>{item}</Combobox.Option>))}
+                              {/* searchNSerie && !selNSerie.some(item => item.toLowerCase() === searchNSerie.toLowerCase()) && (
                                  <Combobox.Option value="$create">+ Criar "{searchNSerie}"</Combobox.Option>
-                              )}
+                              ) */}
                            </Combobox.Options>
                         </Combobox.Dropdown>
                      </Combobox>

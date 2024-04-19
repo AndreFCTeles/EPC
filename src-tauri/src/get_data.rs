@@ -32,27 +32,27 @@ pub fn data_fetcher(data_type: &str, app: AppHandle) -> Result<String, String> {
 
     match data_type {
         "selClientes" => {
-            let client_names: Vec<String> = data
+            let client_names: Vec<_> = data
                 .iter()
                 .map(|c| {
-                    c["nome_cliente"]
-                        .as_str()
-                        .unwrap_or("Unknown client")
-                        .to_string()
+                    serde_json::json!({
+                        "label": c["nome_cliente"].as_str().unwrap_or("Unknown client"),
+                        "value": c["id"].as_str().unwrap_or("")
+                    })
                 })
                 .collect();
             serde_json::to_string(&client_names)
                 .map_err(|e| format!("Failed to serialize client names: {}", e.to_string()))
         }
         "selMaquinas" => {
-            let machines: Vec<String> = data
+            let machines: Vec<_> = data
                 .iter()
                 .flat_map(|c| c["maquinas"].as_array().cloned().unwrap_or_else(Vec::new))
                 .map(|m| {
-                    m["maquina"]
-                        .as_str()
-                        .unwrap_or("Unknown machine")
-                        .to_string()
+                    serde_json::json!({
+                        "label": m["maquina"].as_str().unwrap_or("Unknown machine"),
+                        "value": m["n_serie"].as_str().unwrap_or("")
+                    })
                 })
                 .collect();
             serde_json::to_string(&machines)
@@ -72,8 +72,9 @@ pub fn data_fetcher(data_type: &str, app: AppHandle) -> Result<String, String> {
             serde_json::to_string(&series)
                 .map_err(|e| format!("Failed to serialize series data: {}", e.to_string()))
         }
+        /*
         "selVFio" => {
-            let vfios: Vec<String> = data
+            let vfio: Vec<String> = data
                 .iter()
                 .flat_map(|c| c["maquinas"].as_array().cloned().unwrap_or_else(Vec::new))
                 .flat_map(|m| {
@@ -84,7 +85,7 @@ pub fn data_fetcher(data_type: &str, app: AppHandle) -> Result<String, String> {
                 })
                 .map(|v| v["v_fio"].as_str().unwrap_or("Unknown VFio").to_string())
                 .collect();
-            serde_json::to_string(&vfios)
+            serde_json::to_string(&vfio)
                 .map_err(|e| format!("Failed to serialize VFio data: {}", e.to_string()))
         }
         "selTensao" => {
@@ -107,7 +108,7 @@ pub fn data_fetcher(data_type: &str, app: AppHandle) -> Result<String, String> {
                 .collect();
             serde_json::to_string(&tensions)
                 .map_err(|e| format!("Failed to serialize tension data: {}", e.to_string()))
-        }
+        } */
         _ => Err("Unsupported data type requested".to_string()),
     }
 }
