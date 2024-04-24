@@ -15,6 +15,7 @@ export interface FileWithContentAndCheck {
    parsedData: ClientMeasurement[]; // Directly use ClientMeasurement for parsed CSV data
 }
 
+export type SetFilesFunction = React.Dispatch<React.SetStateAction<FileWithContentAndCheck[]>>;
 
 // Parsed CSV + Form data, for submission
 
@@ -42,6 +43,43 @@ export interface Leitura {
 }
 
 export interface Medicao {
+   numero_ferramenta: string;
+   nome_ferramenta: string;
+   data: string;
+   valor: string;
+   unidades: string;
+}
+
+
+// Fetched JSON Data
+
+export interface JSONCliente {
+   id: string;
+   nome_cliente: string;
+   maquinas: JSONMaquina[];
+}
+
+export interface JSONMaquina {
+   n_serie: string;
+   maquina: string;
+   verificacoes: JSONVerificacao[];
+}
+
+export interface JSONVerificacao {
+   v_fio: string;
+   leituras: JSONLeitura[];
+}
+
+export interface JSONLeitura {
+   id: string;
+   data_leitura: string;
+   tensao: string;
+   unidades: string;
+   medicoes: JSONMedicao[];
+}
+
+export interface JSONMedicao {
+   id: string;
    numero_ferramenta: string;
    nome_ferramenta: string;
    data: string;

@@ -4,7 +4,7 @@ use std::fs;
 use tauri::AppHandle;
 
 #[tauri::command]
-pub fn data_fetcher(data_type: &str, app: AppHandle) -> Result<String, String> {
+pub fn get_data(data_type: &str, app: AppHandle) -> Result<String, String> {
     println!("Resolved data_type: {}", data_type);
 
     let config = app.config();
@@ -72,43 +72,6 @@ pub fn data_fetcher(data_type: &str, app: AppHandle) -> Result<String, String> {
             serde_json::to_string(&series)
                 .map_err(|e| format!("Failed to serialize series data: {}", e.to_string()))
         }
-        /*
-        "selVFio" => {
-            let vfio: Vec<String> = data
-                .iter()
-                .flat_map(|c| c["maquinas"].as_array().cloned().unwrap_or_else(Vec::new))
-                .flat_map(|m| {
-                    m["verificacoes"]
-                        .as_array()
-                        .cloned()
-                        .unwrap_or_else(Vec::new)
-                })
-                .map(|v| v["v_fio"].as_str().unwrap_or("Unknown VFio").to_string())
-                .collect();
-            serde_json::to_string(&vfio)
-                .map_err(|e| format!("Failed to serialize VFio data: {}", e.to_string()))
-        }
-        "selTensao" => {
-            let tensions: Vec<String> = data
-                .iter()
-                .flat_map(|c| c["maquinas"].as_array().cloned().unwrap_or_else(Vec::new))
-                .flat_map(|m| {
-                    m["verificacoes"]
-                        .as_array()
-                        .cloned()
-                        .unwrap_or_else(Vec::new)
-                })
-                .flat_map(|v| v["leituras"].as_array().cloned().unwrap_or_else(Vec::new))
-                .map(|l| {
-                    l["tensao"]
-                        .as_str()
-                        .unwrap_or("Unknown tension")
-                        .to_string()
-                })
-                .collect();
-            serde_json::to_string(&tensions)
-                .map_err(|e| format!("Failed to serialize tension data: {}", e.to_string()))
-        } */
         _ => Err("Unsupported data type requested".to_string()),
     }
 }

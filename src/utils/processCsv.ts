@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/tauri';
 import { showNotification } from '@mantine/notifications';
-import { ClientMeasurement, FileWithContentAndCheck } from './types';
+import { ClientMeasurement, SetFilesFunction } from './types';
 
 // Extracts the file name without extension
 const getFileNameWithoutExtension = (filePath: string): string => {
@@ -11,24 +11,35 @@ const getFileNameWithoutExtension = (filePath: string): string => {
 // Utility function for processing CSV files
 const processCsvFiles = async (
    filePaths: string[],
-   setFiles: React.Dispatch<React.SetStateAction<FileWithContentAndCheck[]>>
+   setVoltFiles: SetFilesFunction,
+   setAmpereFiles: SetFilesFunction
 ): Promise<void> => {
    for (const filePath of filePaths) {
       try {
-            const response: ClientMeasurement[] = await invoke('parse_csv', { filePath });
-            console.log("processing CSV File: ", response);
-            const date = response[0].capture_date; // Use the first valid data row for the date
-            const fileName = getFileNameWithoutExtension(filePath);
-            const label = `${fileName} - ${date}`;
+         const response: ClientMeasurement[] = await invoke('parse_csv', { filePath });
+         console.log("processing CSV File: ", response);
+         if (response.length === 0) {
+            throw new Error("No data in file");
+         }
 
-            setFiles(currentFiles => [...currentFiles, {
-               label,
-               checked: false,
-               parsedData: response, // This is now an array of ClientMeasurement excluding the first header row
-            }]);
+         const date = response[0].capture_date; // Use the first valid data row for the date
+         //const units = response[0].units;
+         const fileType = response[0]?.units.startsWith('V') ? 'volt' : 'ampere';
+         const fileName = getFileNameWithoutExtension(filePath);
+         const label = `${fileName} - ${date}`;
+
+         const fileData = {
+            label,
+            checked: false,
+            parsedData: response,
+         };      
+
+         if (fileType === 'volt') { setVoltFiles(prev => [...prev, fileData]); } 
+         else if (fileType === 'ampere') { setAmpereFiles(prev => [...prev, fileData]); } 
+         else { throw new Error("Unknown units or update function not provided"); }
+         
       } catch (error) {
             console.error('Error processing file:', error);
-            // Assuming showNotification is a utility function to display errors to the user
             showNotification({
                title: 'Error',
                message: `Failed to process file ${getFileNameWithoutExtension(filePath)}`,
