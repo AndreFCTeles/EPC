@@ -16,10 +16,12 @@ pub fn calculate_average_value(medicoes: &[Medicao]) -> f64 {
         .iter()
         .map(|m| m.valor.parse::<f64>().unwrap_or(0.0))
         .sum();
-    sum / medicoes.len() as f64
+    let average = sum / medicoes.len() as f64;
+    average.round_to(2)
 }
 pub fn calculate_deviation(tensao: f64, media: f64) -> f64 {
-    (tensao - media).abs()
+    let deviation = (tensao - media).abs();
+    deviation.round_to(2)
 }
 
 // Utility trait for rounding floats to a specified number of decimal places

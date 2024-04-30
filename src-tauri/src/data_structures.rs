@@ -28,20 +28,24 @@ pub struct ClienteDTO {
 pub struct MaquinaDTO {
     pub n_serie: String,
     pub maquina: String,
-    pub verificacoes: Vec<VerificacaoDTO>,
+    //pub verificacoes: Vec<VerificacaoDTO>,
+    pub leituras: Vec<LeituraDTO>,
 }
 
+/*
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct VerificacaoDTO {
     pub v_fio: String,
     pub leituras: Vec<LeituraDTO>,
 }
+ */
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LeituraDTO {
     pub data_leitura: String,
     pub tensao: String,
     pub unidades: String,
+    pub v_fio: Option<String>, // was part of verificacao
     pub medicoes: Vec<MedicaoDTO>,
 }
 
@@ -76,22 +80,27 @@ impl Cliente {
 pub struct Maquina {
     pub n_serie: String,
     pub maquina: String,
-    pub verificacoes: Vec<Verificacao>,
+    //pub verificacoes: Vec<Verificacao>,
+    pub leituras: Vec<Leitura>,
 }
 impl Maquina {
     pub fn from_dto(dto: MaquinaDTO) -> Self {
         Self {
             n_serie: dto.n_serie,
             maquina: dto.maquina,
+            /*
             verificacoes: dto
                 .verificacoes
                 .into_iter()
                 .map(Verificacao::from_dto)
                 .collect(),
+            */
+            leituras: dto.leituras.into_iter().map(Leitura::from_dto).collect(),
         }
     }
 }
 
+/*
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Verificacao {
     pub v_fio: String,
@@ -105,6 +114,7 @@ impl Verificacao {
         }
     }
 }
+*/
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Leitura {
@@ -112,6 +122,7 @@ pub struct Leitura {
     pub data_leitura: String,
     pub tensao: String,
     pub unidades: String,
+    pub v_fio: Option<String>,
     pub medicoes: Vec<Medicao>,
     pub media: Option<String>,
     pub desvio: Option<String>,
@@ -132,6 +143,7 @@ impl Leitura {
             data_leitura: dto.data_leitura,
             tensao: dto.tensao,
             unidades: dto.unidades,
+            v_fio: dto.v_fio,
             medicoes,
             media: Some(media),
             desvio: Some(desvio),

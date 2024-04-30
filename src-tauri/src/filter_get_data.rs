@@ -55,11 +55,11 @@ pub fn filtered_data_fetcher(
                 .filter(|c| Some(&c.id) == client_id.as_ref())
                 .flat_map(|c| &c.maquinas)
                 .filter(|m| Some(&m.n_serie) == machine_id.as_ref())
-                .flat_map(|m| &m.verificacoes)
-                .map(|v| v.v_fio.clone())
+                .flat_map(|m| &m.leituras)
+                .map(|l| l.v_fio.clone())
                 .collect::<std::collections::HashSet<_>>() // Ensures uniqueness
                 .into_iter()
-                .map(|v| json!({"label": format!("V. Fio: {}", v), "value": v}))
+                .map(|v| json!({"label": format!("V. Fio: {:?}", v), "value": v}))
                 .collect::<Vec<_>>())
         }
 
@@ -69,8 +69,7 @@ pub fn filtered_data_fetcher(
                 .filter(|c| Some(&c.id) == client_id.as_ref())
                 .flat_map(|c| &c.maquinas)
                 .filter(|m| Some(&m.n_serie) == machine_id.as_ref())
-                .flat_map(|m| &m.verificacoes)
-                .flat_map(|v| &v.leituras)
+                .flat_map(|m| &m.leituras)
                 .map(|l| format!("{} {}", l.tensao, l.unidades))
                 .collect::<std::collections::HashSet<_>>() // Ensures uniqueness
                 .into_iter()

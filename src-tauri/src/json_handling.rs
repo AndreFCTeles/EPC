@@ -14,19 +14,22 @@ pub fn process_clientes(existing_clientes: &mut Vec<Cliente>, clientes_dto: Vec<
                         .find(|m| m.n_serie == maquina_dto.n_serie)
                     {
                         Some(maquina) => {
-                            for verificacao_dto in maquina_dto.verificacoes {
-                                let verificacao = maquina
-                                    .verificacoes
-                                    .iter_mut()
-                                    .find(|v| v.v_fio == verificacao_dto.v_fio);
-                                if let Some(verificacao) = verificacao {
-                                    verificacao.leituras.extend(
-                                        verificacao_dto.leituras.into_iter().map(Leitura::from_dto), // Use into_iter() to consume and pass ownership
+                            for leitura_dto in maquina_dto.leituras {
+                                let existing_leitura = maquina.leituras.iter_mut().find(|l| {
+                                    l.data_leitura == leitura_dto.data_leitura
+                                        && l.tensao == leitura_dto.tensao
+                                        && l.unidades == leitura_dto.unidades
+                                });
+
+                                if let Some(leitura) = existing_leitura {
+                                    // Aggregate all Medicoes into the found leitura
+                                    leitura.medicoes.extend(
+                                        leitura_dto.medicoes.into_iter().map(Medicao::from_dto),
                                     );
                                 } else {
-                                    maquina
-                                        .verificacoes
-                                        .push(Verificacao::from_dto(verificacao_dto));
+                                    // If no existing leitura matches, create a new one from the DTO
+                                    let new_leitura = Leitura::from_dto(leitura_dto);
+                                    maquina.leituras.push(new_leitura);
                                 }
                             }
                         }

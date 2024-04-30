@@ -13,35 +13,26 @@ const aggregateData = (clientes: Cliente[]): Cliente => {
                existingMaquina = {
                   n_serie: maquina.n_serie,
                   maquina: maquina.maquina,
-                  verificacoes: []
+                  leituras: []
                };
                aggregatedCliente.maquinas.push(existingMaquina);
          }
 
-         maquina.verificacoes.forEach(verificacao => {
-               let existingVerificacao = existingMaquina.verificacoes.find(v => v.v_fio === verificacao.v_fio);
-               if (!existingVerificacao) {
-                  existingVerificacao = {
-                     v_fio: verificacao.v_fio,
-                     leituras: []
-                  };
-                  existingMaquina.verificacoes.push(existingVerificacao);
-               }
-
-               verificacao.leituras.forEach(leitura => {
-                  let existingLeitura = existingVerificacao.leituras.find(l => l.data_leitura === leitura.data_leitura && l.tensao === leitura.tensao);
-                  if (!existingLeitura) {
-                     existingLeitura = {
-                           data_leitura: leitura.data_leitura,
-                           tensao: leitura.tensao,
-                           unidades: leitura.unidades,
-                           medicoes: []
-                     };
-                     existingVerificacao.leituras.push(existingLeitura);
-                  }
-                  // Aggregate all Medicoes into the found or newly created leitura
-                  existingLeitura.medicoes.push(...leitura.medicoes);
-               });
+         maquina.leituras.forEach(leitura => {
+            let existingLeitura  = existingMaquina.leituras.find(l => l.data_leitura === leitura.data_leitura && l.tensao === leitura.tensao && l.unidades === leitura.unidades);
+            if (!existingLeitura ) {
+               existingLeitura  = {
+                  data_leitura: leitura.data_leitura,
+                  tensao: leitura.tensao,
+                  unidades: leitura.unidades,
+                  v_fio: leitura.v_fio,
+                  medicoes: []
+               };
+               existingMaquina.leituras.push(existingLeitura);
+            }
+            
+            // Aggregate all Medicoes into the found or newly created leitura
+            existingLeitura.medicoes.push(...leitura.medicoes);
          });
       });
    });

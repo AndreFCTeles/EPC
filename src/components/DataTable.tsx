@@ -1,5 +1,10 @@
+/* |---------| */
+/* | IMPORTS | */
+/* |---------| */
+
+// React
 import React, { useState, useEffect } from 'react';
-import fetchData from '../utils/fetchdata';
+// Mantine
 import { 
    Box,
    Group, 
@@ -10,59 +15,158 @@ import {
    Button,
    ScrollArea
 } from '@mantine/core';
-//import { showNotification } from '@mantine/notifications';
+// Utils
+import {JSONCliente, JSONLeitura, fetchedDataObject, AggregatedReading} from '../utils/types'
 import fetchFilteredData from '../utils/fetchFilteredData';
 import fetchFullClientData from '../utils/fetchAllData';
-import {JSONCliente, JSONMaquina, JSONVerificacao, JSONLeitura, JSONMedicao} from '../utils/types'
+import aggregateTableData from '../utils/aggregateTableData';
 
-interface fetchedDataObject {
-   value: string;
-   label: string;
-}
 
-/*
-type TableDataType = {
-   id: string;
-   n_serie: string;
-   maquina: string;
-   // Add additional properties as needed
-};
-*/
 
+
+
+/* |------------| */
+/* | COMPONENTE | */
+/* |------------| */
 
 const DataTable: React.FC = () => {
+   /* |---------| */
+   /* | ESTADOS | */
+   /* |---------| */
+   
    // Data states
    const [selCliId, setSelCliId] = useState<string | null>(null);
    const [selClientes, setSelClientes] = useState<Array<fetchedDataObject>>([]);
-   const [selMaqNSerie, setSelMaqNSerie] = useState<string | null>(null);
+   //const [selMaqNSerie, setSelMaqNSerie] = useState<string | null>(null);
    const [selMaquinas, setSelMaquinas] = useState<Array<fetchedDataObject>>([]);
    const [selVFio, setSelVFio] = useState<Array<fetchedDataObject>>([]);
    const [selTensao, setSelTensao] = useState<Array<fetchedDataObject>>([]);
-   
    // Visibility states
    const [showMaquina, setShowMaquina] = useState(false);
    const [showVFio, setShowVFio] = useState(false);
    const [showTensao, setShowTensao] = useState(false);
-
    // Table data
    const [isLoading, setIsLoading] = useState<boolean>(false);
-   const [filterTableData, setFilterTableData] = useState(null);
+   //const [filterTableData, setFilterTableData] = useState(null);
    const [tableData, setTableData] = useState<JSONCliente | null>(null);
-   const [tableDataMaq, setTableDataMaq] = useState<JSONMaquina[]>([]);
-   const [tableDataVer, setTableDataVer] = useState<JSONVerificacao[]>([]);
-   const [tableDataLei, setTableDataLei] = useState<JSONLeitura[]>([]);
-   const [tableDataMed, setTableDataMed] = useState<JSONMedicao[]>([]);
-
-      
+   const [rowData, setRowData] = useState<JSONCliente[] | null>([]);
    // Checkboxes
-   //const [selectedItems, setSelectedItems] = useState<{ [key: string]: boolean }>({});
    const [selectedItems, setSelectedItems] = useState<Record<string, boolean>>({});
-   //const allChecked = Object.values(selectedItems).every(Boolean);
-   //const someChecked = Object.values(selectedItems).some(Boolean);
-   //const allChecked = tableData.length > 0 && Object.keys(selectedItems).length === tableData.length && Object.values(selectedItems).every(Boolean);
-   //const someChecked = tableData.length > 0 && Object.values(selectedItems).some(Boolean) && !allChecked;   
-   //const allChecked = tableData.every(cliente => selectedItems[cliente.id]);
-   //const someChecked = tableData.some(cliente => selectedItems[cliente.id]) && !allChecked;
+
+
+
+
+
+   /* |-------------------| */
+   /* | UTILITY FUNCTIONS | */
+   /* |-------------------| */
+
+   
+   // Update selectedItems when checkbox is toggled
+   const toggleItemCheck = (id: string) => {
+      setSelectedItems(prev => ({ ...prev, [id]: !prev[id] }));
+   };
+
+   // Update all selectedItems when master checkbox is toggled
+   const toggleAllItemsCheck = (checked: boolean) => {
+      const newSelectedItems: Record<string, boolean> = {};
+      // Assuming `tableData` holds your rows data
+      if (tableData) tableData.maquinas.forEach((machine) => {
+         machine.leituras.forEach((leitura) => {
+               newSelectedItems[leitura.id] = checked;
+         });
+      });
+      setSelectedItems(newSelectedItems);
+   };
+
+   // Render table rows
+   const renderTableRows = () => {
+      if (!tableData) {
+         return <Table.Tr><Table.Td colSpan={10}>Selecione um cliente ou adicione dados para começar.</Table.Td></Table.Tr>;
+      }
+
+      const aggregatedReadings = aggregateTableData(tableData);
+
+      // Render table rows based on aggregated data
+      return aggregatedReadings.map(({ machine, data_leitura, readingV, readingA }) => (
+         <Table.Tr key={`${machine.n_serie}-${data_leitura}`}>
+            <Table.Td>
+               <Checkbox
+                  checked={!!selectedItems[`${machine.n_serie}-${data_leitura}`]}
+                  onChange={() => toggleItemCheck(`${machine.n_serie}-${data_leitura}`)}
+               />
+            </Table.Td>
+            <Table.Td>{`${machine.n_serie} - ${machine.maquina}`}</Table.Td>
+            <Table.Td>{readingV?.v_fio? `${readingV?.v_fio } M/m` : '-'}</Table.Td>
+            <Table.Td>{readingV ? `${readingV.tensao}${readingV.medicoes[0].unidades}` : '-'}</Table.Td>
+            {Array.from({ length: 5 }).map((_, i) => (
+               <Table.Td key={i}>{readingV && readingV.medicoes.length > i ? `${readingV.medicoes[i].valor}${readingV.medicoes[i].unidades}` : '-'}</Table.Td>
+            ))}
+            <Table.Td>{readingV?.media || '-'}</Table.Td>
+            <Table.Td>{readingV?.desvio || '-'}</Table.Td>
+            <Table.Td>{readingA ? `${readingA.tensao}${readingA.medicoes[0].unidades}` : '-'}</Table.Td>
+            {Array.from({ length: 5 }).map((_, i) => (
+               <Table.Td key={i}>{readingA && readingA.medicoes.length > i ? `${readingA.medicoes[i].valor}${readingA.medicoes[i].unidades}` : '-'}</Table.Td>
+            ))}
+            <Table.Td>{readingA?.media || '-'}</Table.Td>
+            <Table.Td>{readingA?.desvio || '-'}</Table.Td>
+            <Table.Td>{data_leitura}</Table.Td>
+         </Table.Tr>
+      ));
+   }
+   
+
+
+
+
+   /* |----------| */
+   /* | HANDLERS | */
+   /* |----------| */
+
+   // Handlers for Select components
+   const handleClienteChange = (value: string | null) => {
+      setSelCliId(value);
+      if (value) {
+         fetchFilteredData("selMaquinas", value).then(data => {
+            setSelMaquinas(data.map((selmaq: fetchedDataObject) => ({ 
+               value: selmaq.value, 
+               label: selmaq.label 
+            })));
+            setShowMaquina(true); 
+
+         });
+      } else { setShowMaquina(false); }
+   };
+
+   const handleMaquinaChange = (value: string | null) => {
+      //setSelMaqNSerie(value);
+      console.log("handleMaquinaChange value:", value);
+      if (value && selCliId) {
+         fetchFilteredData('selVFio', selCliId, value).then(data => {
+            setSelVFio(data.map((vfio: fetchedDataObject) => ({ value: vfio.value, label: vfio.label })));
+            //setTableDataMaq(data);
+            setShowVFio(true);
+         });
+      } else { setShowVFio(false); }
+   };
+
+   const handleVFioChange = (value: string | null) => {      
+      if (value) {
+         fetchFilteredData('selTensao', value).then(data => {
+            setSelTensao(data.map((selten:fetchedDataObject) => ({ value: selten.value, label: selten.label })));
+            setTableData(data);
+            setShowTensao(true); // Show the Tensão select
+         });   
+      } else { setShowTensao(false); }
+   };
+
+
+
+
+
+   /* |---------| */
+   /* | EFFECTS | */
+   /* |---------| */
    
    useEffect(() => {
       // Fetch clientes
@@ -83,103 +187,28 @@ const DataTable: React.FC = () => {
          try {
             const data = await fetchFullClientData(selCliId);
             if (data) {
+               console.log("Client selected. fetching data:")
+               console.log("from ", selCliId, selClientes);
+               console.log(data);
+               console.log(JSON.stringify(data));
                setTableData(data);
-               setFilterTableData(data);  // Assume full data initially matches filtered data
+               //setFilterTableData(data);  // Assume full data initially matches filtered data
             } else { throw new Error("Received no data"); }
          } catch (error) {
             console.error('Failed to fetch full client data:', error);
             setTableData(null);
-            setFilterTableData(null);
+            //setFilterTableData(null);
          } finally { setIsLoading(false); }
       };
       fetchData();
    }, [selCliId]);
-   
-   // Handlers for Select components
-   const handleClienteChange = (value: string | null) => {
-      setSelCliId(value);
-      if (value) {
-         fetchFilteredData("selMaquinas", value).then(data => {
-            setSelMaquinas(data.map((selmaq: fetchedDataObject) => ({ 
-               value: selmaq.value, 
-               label: selmaq.label 
-            })));
-            setShowMaquina(true);
-         });
-      } else { setShowMaquina(false); }
-   };
 
-   const handleMaquinaChange = (value: string | null) => {
-      setSelMaqNSerie(value);
-      console.log("handleMaquinaChange value:", value);
-      if (value && selCliId) {
-         fetchFilteredData('selVFio', selCliId, value).then(data => {
-            setSelVFio(data.map((vfio: fetchedDataObject) => ({ value: vfio.value, label: vfio.label })));
-            setTableDataMaq(data);
-            setShowVFio(true);
-         });
-      } else { setShowVFio(false); }
-   };
 
-   const handleVFioChange = (value: string | null) => {      
-      if (value) {
-         fetchFilteredData('selTensao', value).then(data => {
-            setSelTensao(data.map((selten:fetchedDataObject) => ({ value: selten.value, label: selten.label })));
-            setTableData(data);
-            setShowTensao(true); // Show the Tensão select
-         });   
-      } else { setShowTensao(false); }
-   };
 
-   // Update selectedItems when checkbox is toggled
-   const toggleItemCheck = (id: string) => {
-      setSelectedItems(prev => ({ ...prev, [id]: !prev[id] }));
-   };
 
-   // Update all selectedItems when master checkbox is toggled
-   /*
-   const toggleAllItemsCheck = (checked: boolean) => {
-      const newSelectedItems: Record<string, boolean> = {};
-      tableData.forEach((cliente: JSONCliente) => {
-         newSelectedItems[cliente.id] = checked;
-      });
-      setSelectedItems(newSelectedItems);
-   };
-   */
-
-   const renderTableRows = () => {
-      if (!tableData) {
-         return <Table.Tr><Table.Td colSpan={10}>No data available.</Table.Td></Table.Tr>;
-      }
-
-      // Assuming `tableData` is a single client object with a `maquinas` array
-      return tableData.maquinas.flatMap(machine =>
-         machine.verificacoes.flatMap(verification =>
-            verification.leituras.flatMap(reading =>
-                  <Table.Tr key={machine.n_serie} ta="center">
-                     <Table.Td ta="left">{`${machine.n_serie} - ${machine.maquina}`}</Table.Td>
-                     <Table.Td ta="center">{`${verification.v_fio} M/m`}</Table.Td>
-                     <Table.Td ta="center">{`${reading.tensao} ${reading.unidades}`}</Table.Td>
-                     {reading.medicoes.map((medicao, index) => (
-                        <Table.Td key={`${medicao.id}-${index}`} ta="center">{`${medicao.valor} ${medicao.unidades}`}</Table.Td>
-                     ))}
-                     <Table.Td ta="center"></Table.Td>
-                     <Table.Td ta="center"></Table.Td>
-                     <Table.Td ta="center"></Table.Td>
-                     <Table.Td ta="center"></Table.Td>
-                     <Table.Td ta="center"></Table.Td>
-                     <Table.Td ta="center"></Table.Td>
-                     <Table.Td ta="center"></Table.Td>
-                     <Table.Td ta="center"></Table.Td>
-                     <Table.Td ta="center"></Table.Td>
-                     <Table.Td ta="center"></Table.Td>
-                     <Table.Td ta="center">{reading.data_leitura}</Table.Td>
-                  </Table.Tr>
-            )
-         )
-      );
-   };
-
+   /* |-----| */
+   /* | JSX | */
+   /* |-----| */
 
    return (
       <Box m={0} p={0}>
@@ -231,30 +260,47 @@ const DataTable: React.FC = () => {
 
             <Button maw={200} ml={"xs"}>Exportar selecionados</Button>
 
-            <ScrollArea>
-               <Table striped highlightOnHover withTableBorder withColumnBorders ta="center">                     
+            <ScrollArea offsetScrollbars >
+               <Table 
+               w={"auto"} 
+               miw={"100%"}  
+               ta="center"
+               striped 
+               highlightOnHover 
+               withTableBorder 
+               withColumnBorders 
+               style={{ whiteSpace: 'nowrap' }}>
                   <Table.Thead>
                      <Table.Tr>
-                        <Table.Th ta="center">Descrição</Table.Th>
-                        <Table.Th ta="center">V. Fio</Table.Th>
-                        <Table.Th ta="center">Leitura (Volt.)</Table.Th>
-                        <Table.Th ta="center">10''</Table.Th>
-                        <Table.Th ta="center">10''</Table.Th>
-                        <Table.Th ta="center">10''</Table.Th>
-                        <Table.Th ta="center">10''</Table.Th>
-                        <Table.Th ta="center">10''</Table.Th>
-                        <Table.Th ta="center">Media</Table.Th>
-                        <Table.Th ta="center">Desvio</Table.Th>
-                        <Table.Th ta="center">Leitura (Amp.)</Table.Th>
-                        <Table.Th ta="center">10''</Table.Th>
-                        <Table.Th ta="center">10''</Table.Th>
-                        <Table.Th ta="center">10''</Table.Th>
-                        <Table.Th ta="center">10''</Table.Th>
-                        <Table.Th ta="center">10''</Table.Th>
-                        <Table.Th ta="center">Media</Table.Th>
-                        <Table.Th ta="center">Desvio</Table.Th>
-                        <Table.Th ta="center">Data de leitura</Table.Th>
-                     </Table.Tr>
+                        {showMaquina ? (<>
+                           <Table.Th>
+                              <Checkbox
+                                 checked={Object.values(selectedItems).every(Boolean)}
+                                 indeterminate={!Object.values(selectedItems).every(Boolean) && Object.values(selectedItems).some(Boolean)}
+                                 onChange={(event) => toggleAllItemsCheck(event.currentTarget.checked)}
+                              />
+                           </Table.Th>
+                           <Table.Th ta="center">Descrição</Table.Th>
+                           <Table.Th ta="center">V. Fio</Table.Th>
+                           <Table.Th ta="center">Leitura (Volt.)</Table.Th>
+                           <Table.Th ta="center">10''</Table.Th>
+                           <Table.Th ta="center">10''</Table.Th>
+                           <Table.Th ta="center">10''</Table.Th>
+                           <Table.Th ta="center">10''</Table.Th>
+                           <Table.Th ta="center">10''</Table.Th>
+                           <Table.Th ta="center">Media</Table.Th>
+                           <Table.Th ta="center">Desvio</Table.Th>
+                           <Table.Th ta="center">Leitura (Amp.)</Table.Th>
+                           <Table.Th ta="center">10''</Table.Th>
+                           <Table.Th ta="center">10''</Table.Th>
+                           <Table.Th ta="center">10''</Table.Th>
+                           <Table.Th ta="center">10''</Table.Th>
+                           <Table.Th ta="center">10''</Table.Th>
+                           <Table.Th ta="center">Media</Table.Th>
+                           <Table.Th ta="center">Desvio</Table.Th>
+                           <Table.Th ta="center">Data de leitura</Table.Th>
+                        </> ) : <Table.Th ta="center">Tabela de leituras</Table.Th> }
+                     </Table.Tr> 
                   </Table.Thead>
                   <Table.Tbody>
                      {renderTableRows()}

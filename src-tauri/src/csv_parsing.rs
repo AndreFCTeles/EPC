@@ -11,6 +11,14 @@ use std::fs::File;
 #[tauri::command]
 // Declaration of the `parse_csv` function with a parameter `file_path` of type `String`
 pub fn parse_csv(file_path: String) -> Result<Vec<Measurement>, String> {
+    println!("  ");
+    println!("----------------------------------------------------------------------------------------------------------------");
+    println!("  ");
+    println!("----------------------");
+    println!("|--| PARSING CSV: |--|");
+    println!("----------------------");
+    println!("  ");
+
     let file = File::open(&file_path).map_err(|e| e.to_string())?;
     let mut rdr = ReaderBuilder::new()
         .has_headers(false)
@@ -61,6 +69,7 @@ pub fn parse_csv(file_path: String) -> Result<Vec<Measurement>, String> {
             let value: f64 = value_str
                 .parse()
                 .map_err(|_| "Invalid number format for 'Value'")?;
+            println!("Value parsed: {}", value);
             value_total += value;
             measurement_count += 1;
         }
@@ -70,15 +79,26 @@ pub fn parse_csv(file_path: String) -> Result<Vec<Measurement>, String> {
         return Err("No valid measurements found.".to_string());
     }
 
+    println!("Total value sum: {}", value_total); // Debugging total sum
+    println!("Measurement count: {}", measurement_count); // Debugging count
+
+    /*
     let value = (value_total / measurement_count as f64)
         .round_to(2)
         .to_string();
+    */
+
+    let average = value_total / measurement_count as f64;
+    println!("Calculated average before rounding: {}", average);
+
+    let rounded_average = average.round_to(2);
+    println!("Rounded average: {}", rounded_average);
 
     let measurement = Measurement {
         model_number,
         tool_name,
         capture_date: first_capture_date,
-        value,
+        value: rounded_average.to_string(),
         units: first_units,
     };
 
@@ -86,6 +106,10 @@ pub fn parse_csv(file_path: String) -> Result<Vec<Measurement>, String> {
         "CSV file was parsed. Serialized data: {}",
         serde_json::to_string(&measurement).unwrap_or_else(|_| "Failed to serialize".into())
     );
+
+    println!("  ");
+    println!("----------------------------------------------------------------------------------------------------------------");
+    println!("  ");
 
     Ok(vec![measurement])
 }

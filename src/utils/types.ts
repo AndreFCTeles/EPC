@@ -27,11 +27,6 @@ export interface Cliente {
 export interface Maquina {
    n_serie: string;
    maquina: string;
-   verificacoes: Verificacao[];
-}
-
-export interface Verificacao {
-   v_fio: string;
    leituras: Leitura[];
 }
 
@@ -39,6 +34,7 @@ export interface Leitura {
    data_leitura: string;
    tensao: string;
    unidades: string;
+   v_fio?: string;
    medicoes: Medicao[];
 }
 
@@ -62,11 +58,6 @@ export interface JSONCliente {
 export interface JSONMaquina {
    n_serie: string;
    maquina: string;
-   verificacoes: JSONVerificacao[];
-}
-
-export interface JSONVerificacao {
-   v_fio: string;
    leituras: JSONLeitura[];
 }
 
@@ -74,8 +65,11 @@ export interface JSONLeitura {
    id: string;
    data_leitura: string;
    tensao: string;
-   unidades: string;
+   unidades: 'V' | 'A';
+   v_fio?: string;
    medicoes: JSONMedicao[];
+   media: string;
+   desvio: string;
 }
 
 export interface JSONMedicao {
@@ -84,5 +78,18 @@ export interface JSONMedicao {
    nome_ferramenta: string;
    data: string;
    valor: string;
-   unidades: string;
+   unidades: 'V' | 'A' | string;
+}
+
+
+export interface fetchedDataObject {
+   value: string;
+   label: string;
+}
+
+export interface AggregatedReading {
+   machine: JSONMaquina;
+   data_leitura: string;
+   readingV?: JSONLeitura;
+   readingA?: JSONLeitura;
 }

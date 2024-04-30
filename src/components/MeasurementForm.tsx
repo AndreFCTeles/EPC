@@ -14,18 +14,16 @@ import {
    Grid, 
    NumberInput, 
    Table,
-   //Text,
    Combobox, 
    InputBase, 
    useCombobox
 } from '@mantine/core'
 import { DatesProvider, DateTimePicker } from '@mantine/dates';
 import { showNotification } from '@mantine/notifications';
-//import { useDisclosure } from '@mantine/hooks';
 import { useForm } from '@mantine/form';
 // Tauri
 import { invoke } from '@tauri-apps/api/tauri';
-import { listen } from '@tauri-apps/api/event';
+//import { listen } from '@tauri-apps/api/event'; - moved to app.tsx
 import { open } from '@tauri-apps/api/dialog';
 // DayJS
 import dayjs from 'dayjs';
@@ -36,6 +34,9 @@ import { FileWithContentAndCheck, SetFilesFunction } from '../utils/types';
 import processCsvFiles from '../utils/processCsv';
 import aggregateData from '../utils/aggregateData';
 import fetchData from '../utils/fetchdata';
+
+
+
 
 
 /* |------------| */
@@ -49,7 +50,7 @@ interface MeasureFormData {
    nSerie: string;
    tensaoA?: number | string;
    tensaoV?: number | string;
-   vFio: number | string;
+   vFio?: number | string;
    data?: Date | string;
 }
 // Fetching
@@ -57,12 +58,21 @@ interface fetchedDataObject {
    value: string;
    label: string;
 }
+// Drag-drop Files
+interface MeasurementFormProps {
+   initialFiles: string[];
+   onFormSubmit: () => void;
+}
+
+
+
+
 
 /* |------------| */
 /* | COMPONENTE | */
 /* |------------| */
 
-const MeasurementForm: React.FC = () => {
+const MeasurementForm: React.FC<MeasurementFormProps> = ({initialFiles, onFormSubmit}) => {
    /* |---------| */
    /* | ESTADOS | */
    /* |---------| */
@@ -76,11 +86,10 @@ const MeasurementForm: React.FC = () => {
    const [selClientes, setSelClientes] = useState<string[]>([]);
    const [selMaquinas, setSelMaquinas] = useState<string[]>([]);
    const [selNSerie, setSelNSerie] = useState<string[]>([]);
-
    // Interface states
    const exactlyFiveVoltsChecked = voltFiles.filter(file => file.checked).length === 5;
    const exactlyFiveAmperesChecked = ampereFiles.filter(file => file.checked).length === 5;
-   const submitButtonEnabled = exactlyFiveVoltsChecked && exactlyFiveAmperesChecked;
+   const submitButtonEnabled = (exactlyFiveVoltsChecked && voltFiles.length > 0) || (exactlyFiveAmperesChecked && ampereFiles.length > 0);
    // Form states
    const form = useForm<MeasureFormData>({
       initialValues: {
@@ -92,6 +101,11 @@ const MeasurementForm: React.FC = () => {
          vFio: 0,
          data: dataAgora
       },
+      validate: {
+         tensaoA: (value) => ampereFiles.length > 0 && !value ? 'Adicione valor de corrente' : null,
+         tensaoV: (value) => voltFiles.length > 0 && !value ? 'Adicione valor de tensão' : null,
+         vFio: (value) => voltFiles.length > 0 && !value ? 'Adicione uma velocidade de fio' : null,
+      }
    });
    // Combobox states
    const [searchCliente, setSearchCliente] = useState('');
@@ -118,6 +132,10 @@ const MeasurementForm: React.FC = () => {
       },
    });
 
+
+
+
+
    /* |-------------------| */
    /* | UTILITY FUNCTIONS | */
    /* |-------------------| */
@@ -126,6 +144,21 @@ const MeasurementForm: React.FC = () => {
    const clearFiles = () => {
       setVoltFiles([]);
       setAmpereFiles([]);
+      form.setValues({
+         ...form.values,
+         tensaoV: 0,    // Reset tensaoV
+         tensaoA: 0,    // Reset tensaoA
+         vFio: 0        // Reset vFio
+      });
+   };
+   const clearVoltFiles = () => {
+      setVoltFiles([]);
+      form.setFieldValue('tensaoV', 0);
+      form.setFieldValue('vFio', 0);
+   };
+   const clearAmpereFiles = () => {
+      setAmpereFiles([]);
+      form.setFieldValue('tensaoA', 0);
    };
 
    // Render Checkbox Table / list
@@ -144,7 +177,6 @@ const MeasurementForm: React.FC = () => {
          const newFiles = files.map((file, i) => i === index ? { ...file, checked: !file.checked } : file );
          setFilesFunction(newFiles);
       };
-
       
       if (files.length > 0) { return (
          <Box mt={"md"}>
@@ -182,6 +214,9 @@ const MeasurementForm: React.FC = () => {
    };
 
 
+
+
+
    /* |----------| */
    /* | HANDLERS | */
    /* |----------| */
@@ -191,42 +226,40 @@ const MeasurementForm: React.FC = () => {
       console.log("Submitting data...");      
       console.log("Form values:", values);      
 
+      // Verify valid file selections
+      const selectedVoltFiles = voltFiles.filter(file => file.checked).map(file => ({ ...file, type: 'V' }));
+      const selectedAmpereFiles = ampereFiles.filter(file => file.checked).map(file => ({ ...file, type: 'A' }));
+      const validVoltCheck = selectedVoltFiles.length === 5;
+      const validAmpereCheck = selectedAmpereFiles.length === 5;
+      const selectedFiles = [...selectedVoltFiles, ...selectedAmpereFiles]; 
+      console.log("Files being submitted:", selectedFiles);
+
+      // Ensure we handle undefined safely
+      const handleTensaoV = values.tensaoV?.toString() || "0";  // Default to "0" or another sensible default
+      const handleTensaoA = values.tensaoA?.toString() || "0";  // Default to "0" or another sensible default
       
-      const validVoltCheck = voltFiles.length > 0 && voltFiles.filter(file => file.checked).length === 5;
-      const validAmpereCheck = ampereFiles.length > 0 && ampereFiles.filter(file => file.checked).length === 5;
-      /*
-      if (
-         (voltFiles.length > 0 && voltFiles.filter(file => file.checked).length !== 5) || 
-         (ampereFiles.length > 0 && ampereFiles.filter(file => file.checked).length !== 5)
-      ) {
-         console.error("Por favor, selecione 5 ficheiros de medição para continuar.");
+      if (!validVoltCheck && !validAmpereCheck) {
+         console.error("Please select 5 files for at least one type of measurement to continue.");
          showNotification({
             title: 'Aviso',
-            message: 'Por favor, selecione 5 ficheiros de medição para continuar.',
+            message: 'Por favor selecione cinco ficheiros de pelo menos um tipo de leitura para continuar.',
             color: 'red',
          });
          return;
       }
-      */
-
-      // Filter only the files that have been checked
-      const selectedVoltFiles = voltFiles.filter(file => file.checked);
-      const selectedAmpereFiles = ampereFiles.filter(file => file.checked);
-      const selectedFiles = [...selectedVoltFiles, ...selectedAmpereFiles]; 
-      console.log("Files being submitted:", selectedFiles);
 
       // Prepare the data payload for backend processing
-      const submissionData = selectedFiles.map(file => ({
+      const allSelectedFiles = [...selectedVoltFiles, ...selectedAmpereFiles];
+      const submissionData = allSelectedFiles.map(file => ({
          nome_cliente: values.cliente,
          maquinas: [{
-            n_serie: values.nSerie,
-            maquina: values.maquina,
-            verificacoes: [{
-               v_fio: values.vFio.toString(), // Ensure v_fio is the correct field name as expected by the backend
+               n_serie: values.nSerie,
+               maquina: values.maquina,
                leituras: file.parsedData.map(data => ({
                   data_leitura: values.data ? dayjs(values.data).format("DD/MM/YYYY HH:mm") : "",
-                  tensao: values.tensao.toString(),
-                  unidades: values.uniTensao, // This ensures the unidades field is populated
+                  tensao: file.type === 'V' ? handleTensaoV : handleTensaoA,
+                  unidades: file.type,
+                  v_fio: file.type === 'V' ? values.vFio?.toString() : undefined,  // Handle undefined explicitly
                   medicoes: [{
                      numero_ferramenta: data.model_number,
                      nome_ferramenta: data.tool_name,
@@ -235,7 +268,6 @@ const MeasurementForm: React.FC = () => {
                      unidades: data.units,
                   }]
                }))
-            }]
          }]
       }));
 
@@ -253,6 +285,9 @@ const MeasurementForm: React.FC = () => {
             color: 'green',
             // onClose: return to DataTable.tsx component
          });
+        form.reset();  // Reset form fields to initial values
+        clearFiles();  // Clear file lists and associated data
+        onFormSubmit();  // Additional actions post-submission
       } catch (error) {
          console.error("Failed to write data to JSON file:", error);
          showNotification({
@@ -291,17 +326,14 @@ const MeasurementForm: React.FC = () => {
 
 
 
+
+
    /* |---------| */
    /* | EFFECTS | */
    /* |---------| */
-
-   // Effect for handling drag-and-drop
-   useEffect(() => {
-      const unsubscribe = listen('tauri://file-drop', async (event) => {
-         if (event.payload && Array.isArray(event.payload)) { handleFiles(event.payload); } // Directly pass file paths to utility
-      });
-      return () => { unsubscribe.then(unsubscribeFn => unsubscribeFn()); };
-   }, []);
+   
+   // Effect for drag-drop
+   useEffect(() => { handleFiles(initialFiles); }, [initialFiles]);
 
    // Effect for fetching
    useEffect(() => {
@@ -312,7 +344,10 @@ const MeasurementForm: React.FC = () => {
       fetchData('selMaquinas').then((data) => { setSelMaquinas(data.map((selmaq: fetchedDataObject) => selmaq.label)); });
       // Fetch series -- assuming you have a similar setup for series
       fetchData('selNSerie').then((data: string[]) => { setSelNSerie(data.map((selns:string) => selns)); });
-   }, []);   
+   }, []);
+
+
+
 
    /* |-----| */
    /* | JSX | */
@@ -382,7 +417,7 @@ const MeasurementForm: React.FC = () => {
                </Grid> 
                
 
-               <Grid mt={"sm"} align="flex-end" grow>
+               <Grid mt={{ base: 0, md: "sm" }} align="flex-end" grow>
                   <Grid.Col span={{ base: 12, md: 6, lg: 3 }}>   
                      <Combobox
                      withinPortal={false}
@@ -396,7 +431,7 @@ const MeasurementForm: React.FC = () => {
                            <InputBase
                            rightSection={<Combobox.Chevron />}
                            rightSectionPointerEvents="none"
-                           mt="md"
+                           mt="sm"
                            label="Máquina"
                            placeholder="Escolher da lista ou criar novo"
                            required
@@ -442,7 +477,6 @@ const MeasurementForm: React.FC = () => {
                            <InputBase
                            rightSection={<Combobox.Chevron />}
                            rightSectionPointerEvents="none"
-                           mt="md"
                            label="Número de série"
                            placeholder="Escolher da lista ou criar novo"
                            required
@@ -487,8 +521,9 @@ const MeasurementForm: React.FC = () => {
                      <Grid.Col span={6}>
                         {voltFiles.length > 0 && (
                            <Fieldset legend="Leituras Volt." m={0}>
-                              <Grid>
-                                 <Grid.Col span={6}>
+                              <Button w={"100%"} onClick={clearVoltFiles} color="red">Limpar Lista</Button>                        
+                              <Grid mt={"md"}>
+                                 <Grid.Col span={{base: 12, md: 6}}>
                                     <NumberInput
                                     label="Leitura Volt."
                                     placeholder="0"
@@ -499,7 +534,7 @@ const MeasurementForm: React.FC = () => {
                                     {...form.getInputProps('tensaoV')}
                                     />
                                  </Grid.Col>
-                                 <Grid.Col span={6}>
+                                 <Grid.Col span={{base: 12, md: 6}}>
                                     <NumberInput
                                     label="V. de fio"
                                     placeholder="0"
@@ -519,8 +554,9 @@ const MeasurementForm: React.FC = () => {
                      <Grid.Col span={6}>
                         {ampereFiles.length > 0 && (
                            <Fieldset legend="Leituras Amp." m={0}>
-                              <Grid>
-                                 <Grid.Col span={6}>
+                              <Button w={"100%"} onClick={clearAmpereFiles} color="red">Limpar Lista</Button>
+                              <Grid mt={"md"}>
+                                 <Grid.Col span={{base: 12, md: 6}}>
                                     <NumberInput
                                     label="Leitura Amp."
                                     placeholder="0"
@@ -532,7 +568,7 @@ const MeasurementForm: React.FC = () => {
                                     required
                                     />
                                  </Grid.Col>                                 
-                                 <Grid.Col span={6}></Grid.Col>
+                                 <Grid.Col span={{base: 12, md: 6}} h={0} m={0} p={0}></Grid.Col>
                               </Grid>
                               {renderAFilesSection()}
                            </Fieldset>
