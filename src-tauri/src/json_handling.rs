@@ -15,30 +15,48 @@ pub fn process_clientes(existing_clientes: &mut Vec<Cliente>, clientes_dto: Vec<
                     {
                         Some(maquina) => {
                             for leitura_dto in maquina_dto.leituras {
-                                let existing_leitura = maquina.leituras.iter_mut().find(|l| {
-                                    l.data_leitura == leitura_dto.data_leitura
-                                        && l.tensao == leitura_dto.tensao
-                                        && l.unidades == leitura_dto.unidades
-                                });
-
-                                if let Some(leitura) = existing_leitura {
-                                    // Aggregate all Medicoes into the found leitura
-                                    leitura.medicoes.extend(
-                                        leitura_dto.medicoes.into_iter().map(Medicao::from_dto),
-                                    );
-                                } else {
-                                    // If no existing leitura matches, create a new one from the DTO
-                                    let new_leitura = Leitura::from_dto(leitura_dto);
-                                    maquina.leituras.push(new_leitura);
+                                match maquina
+                                    .leituras
+                                    .iter_mut()
+                                    .find(|l| l.data_leitura == leitura_dto.data_leitura)
+                                {
+                                    Some(leitura) => {
+                                        for grupo_dto in leitura_dto.leitura {
+                                            let grupo = leitura.leitura.iter_mut().find(|g| {
+                                                g.tensao == grupo_dto.tensao
+                                                    && g.unidades == grupo_dto.unidades
+                                            });
+                                            if let Some(existing_grupo) = grupo {
+                                                existing_grupo.medicoes.extend(
+                                                    grupo_dto
+                                                        .medicoes
+                                                        .into_iter()
+                                                        .map(Medicao::from_dto),
+                                                );
+                                            } else {
+                                                leitura
+                                                    .leitura
+                                                    .push(LeituraGrupo::from_dto(grupo_dto));
+                                            }
+                                        }
+                                    }
+                                    None => {
+                                        let new_leitura = Leitura::from_dto(leitura_dto);
+                                        maquina.leituras.push(new_leitura);
+                                    }
                                 }
                             }
                         }
-                        None => cliente.maquinas.push(Maquina::from_dto(maquina_dto)),
+                        None => {
+                            let new_maquina = Maquina::from_dto(maquina_dto);
+                            cliente.maquinas.push(new_maquina);
+                        }
                     }
                 }
             }
             None => {
-                existing_clientes.push(Cliente::from_dto(cliente_dto));
+                let new_cliente = Cliente::from_dto(cliente_dto);
+                existing_clientes.push(new_cliente);
             }
         }
     }

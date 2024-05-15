@@ -28,24 +28,20 @@ pub struct ClienteDTO {
 pub struct MaquinaDTO {
     pub n_serie: String,
     pub maquina: String,
-    //pub verificacoes: Vec<VerificacaoDTO>,
     pub leituras: Vec<LeituraDTO>,
 }
-
-/*
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct VerificacaoDTO {
-    pub v_fio: String,
-    pub leituras: Vec<LeituraDTO>,
-}
- */
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LeituraDTO {
     pub data_leitura: String,
+    pub leitura: Vec<LeituraGrupoDTO>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LeituraGrupoDTO {
     pub tensao: String,
     pub unidades: String,
-    pub v_fio: Option<String>, // was part of verificacao
+    pub v_fio: Option<String>,
     pub medicoes: Vec<MedicaoDTO>,
 }
 
@@ -62,7 +58,7 @@ pub struct MedicaoDTO {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Cliente {
-    pub id: String, // Now using UUIDs
+    pub id: String,
     pub nome_cliente: String,
     pub maquinas: Vec<Maquina>,
 }
@@ -80,7 +76,6 @@ impl Cliente {
 pub struct Maquina {
     pub n_serie: String,
     pub maquina: String,
-    //pub verificacoes: Vec<Verificacao>,
     pub leituras: Vec<Leitura>,
 }
 impl Maquina {
@@ -88,72 +83,65 @@ impl Maquina {
         Self {
             n_serie: dto.n_serie,
             maquina: dto.maquina,
-            /*
-            verificacoes: dto
-                .verificacoes
-                .into_iter()
-                .map(Verificacao::from_dto)
-                .collect(),
-            */
             leituras: dto.leituras.into_iter().map(Leitura::from_dto).collect(),
         }
     }
 }
-
-/*
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Verificacao {
-    pub v_fio: String,
-    pub leituras: Vec<Leitura>,
-}
-impl Verificacao {
-    pub fn from_dto(dto: VerificacaoDTO) -> Self {
-        Self {
-            v_fio: dto.v_fio,
-            leituras: dto.leituras.into_iter().map(Leitura::from_dto).collect(),
-        }
-    }
-}
-*/
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Leitura {
-    pub id: String, // Now using UUIDs
+    pub id: String,
     pub data_leitura: String,
-    pub tensao: String,
-    pub unidades: String,
-    pub v_fio: Option<String>,
-    pub medicoes: Vec<Medicao>,
-    pub media: Option<String>,
-    pub desvio: Option<String>,
+    pub leitura: Vec<LeituraGrupo>,
 }
 impl Leitura {
     pub fn from_dto(dto: LeituraDTO) -> Self {
-        // First, convert all `MedicaoDTO` to `Medicao` and collect them into a vector.
-        let medicoes: Vec<Medicao> = dto.medicoes.into_iter().map(Medicao::from_dto).collect();
-
-        // Now that `medicoes` is available, calculate `media` and `desvio`.
-        let media = calculate_average_value(&medicoes).to_string(); // Convert to string after calculation
-        let tensao_parsed = dto.tensao.parse::<f64>().unwrap_or_default(); // Safe parse with fallback to default (0.0)
-        let desvio =
-            calculate_deviation(tensao_parsed, calculate_average_value(&medicoes)).to_string(); // Convert to string after calculation
+        let leitura_grupos: Vec<LeituraGrupo> = dto
+            .leitura
+            .into_iter()
+            .map(LeituraGrupo::from_dto)
+            .collect();
 
         Self {
             id: Uuid::new_v4().to_string(),
             data_leitura: dto.data_leitura,
+            leitura: leitura_grupos,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LeituraGrupo {
+    pub tensao: String,
+    pub unidades: String,
+    pub v_fio: Option<String>,
+    pub medicoes: Vec<Medicao>,
+    pub media: String,
+    pub desvio: String,
+}
+impl LeituraGrupo {
+    pub fn from_dto(dto: LeituraGrupoDTO) -> Self {
+        let medicoes: Vec<Medicao> = dto.medicoes.into_iter().map(Medicao::from_dto).collect();
+
+        let media = calculate_average_value(&medicoes).to_string();
+        let tensao_parsed = dto.tensao.parse::<f64>().unwrap_or_default();
+        let desvio =
+            calculate_deviation(tensao_parsed, calculate_average_value(&medicoes)).to_string();
+
+        Self {
             tensao: dto.tensao,
             unidades: dto.unidades,
             v_fio: dto.v_fio,
             medicoes,
-            media: Some(media),
-            desvio: Some(desvio),
+            media: media,
+            desvio: desvio,
         }
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Medicao {
-    pub id: String, // Now using UUIDs
+    pub id: String,
     pub numero_ferramenta: String,
     pub nome_ferramenta: String,
     pub data: String,

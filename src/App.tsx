@@ -5,10 +5,15 @@
 // React
 import React, { useState, useEffect } from 'react';
 // Mantine
+import { useDisclosure } from '@mantine/hooks';
 import { 
    AppShell, 
    Button, 
-   Title
+   Title,
+   Drawer,
+   Flex,
+   Box,
+   Text
 } from '@mantine/core';
 // Tauri
 import { listen } from '@tauri-apps/api/event';
@@ -22,6 +27,7 @@ import DataTable from './components/DataTable';
 
 const App: React.FC = () => {
    // States
+   const [opened, { open, close }] = useDisclosure(false);
    const [files, setFiles] = useState<string[]>([]);
    const [isFormVisible, setIsFormVisible] = useState<boolean>(false);
    const [formSubmitted, setFormSubmitted] = useState<boolean>(false);
@@ -86,13 +92,51 @@ const App: React.FC = () => {
             </AppShell.Header>
 
             <AppShell.Navbar p={"sm"}>
-               <Button onClick={() => setIsFormVisible(false)} disabled={!isFormVisible} variant={isFormVisible ? 'filled' : 'outline'}>Consultar</Button>
-               <Button onClick={() => setIsFormVisible(true)} disabled={isFormVisible} variant={!isFormVisible ? 'filled' : 'outline'} mt={"sm"}>Nova Medição</Button>
+               
+               <Flex direction="column" justify="space-between" w={"100%"} h={"100%"}>
+                  <Box w={"100%"}>
+                     <Button 
+                     onClick={() => setIsFormVisible(false)} 
+                     disabled={!isFormVisible} 
+                     variant={isFormVisible ? 'filled' : 'outline'} 
+                     w={"100%"} 
+                     >Consultar</Button>
+                     <Button 
+                     onClick={() => setIsFormVisible(true)} 
+                     disabled={isFormVisible} 
+                     variant={!isFormVisible ? 'filled' : 'outline'} 
+                     w={"100%"}
+                     mt={"sm"}
+                     >Nova Medição</Button>
+                  </Box>
+                  <Box w={"100%"}>
+                     <Button 
+                     onClick={open} 
+                     mb={0}
+                     w={"100%"}  
+                     mt={"sm"}
+                     >Definições</Button>
+                  </Box>
+               </Flex>
             </AppShell.Navbar>
 
             <AppShell.Main>
-               {isFormVisible ? ( <MeasurementForm initialFiles={files} onFormSubmit={handleFormSubmit} /> ) 
-               : ( <DataTable /> )}
+               <Drawer 
+               opened={opened} 
+               onClose={close} 
+               title="Definições"
+               position="right"
+               size={"50%"}
+               overlayProps={{ backgroundOpacity: 0.2, blur: 1 }}
+               >
+                  <Text>Em desenvolvimento</Text>
+               {/* Drawer content */}
+               </Drawer>
+               {
+                  isFormVisible 
+                     ? ( <MeasurementForm initialFiles={files} onFormSubmit={handleFormSubmit} /> ) 
+                     : ( <DataTable /> )
+               }               
             </AppShell.Main>
          </AppShell>
       </>

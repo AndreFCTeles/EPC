@@ -2,21 +2,22 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use csv_parsing::parse_csv;
+use export::create_excel_file;
 use filter_get_data::filtered_data_fetcher;
 use get_data::get_data;
 use get_json_data::full_cliente_data;
 use process_data::process_and_save_data;
-//use xlsx_data_exporter::datasheet_exporter;
 
 mod csv_parsing;
 mod data_structures;
+mod export;
 mod filter_get_data;
 mod get_data;
 mod get_json_data;
 mod json_handling;
 mod process_data;
+mod table_generation;
 mod utilities;
-//mod xlsx_data_exporter;
 
 // ------------------- Run the application -------------------
 
@@ -29,7 +30,7 @@ fn main() {
             get_data,
             filtered_data_fetcher,
             full_cliente_data,
-            //datasheet_exporter
+            create_excel_file
         ])
         // Setup and run the Tauri application.
         .run(tauri::generate_context!())

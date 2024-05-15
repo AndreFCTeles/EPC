@@ -75,5 +75,3 @@ pub fn get_data(data_type: &str, app: AppHandle) -> Result<String, String> {
         _ => Err("Unsupported data type requested".to_string()),
     }
 }
-
-//.cloned().unwrap_or_else(Vec::new)) -- Fix for ChatGPT bullshit

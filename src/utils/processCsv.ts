@@ -28,6 +28,8 @@ const processCsvFiles = async (
          const fileName = getFileNameWithoutExtension(filePath);
          const label = `${fileName} - ${date}`;
 
+         console.log("---------------------------------------------------------------------------");
+         console.log("parsing CSV File: ", fileName);
          const fileData = {
             label,
             checked: false,
@@ -38,6 +40,8 @@ const processCsvFiles = async (
          else if (fileType === 'ampere') { setAmpereFiles(prev => [...prev, fileData]); } 
          else { throw new Error("Unknown units or update function not provided"); }
          
+         console.log("parsed file: ", fileName);
+         console.log("---------------------------------------------------------------------------");
       } catch (error) {
             console.error('Error processing file:', error);
             showNotification({

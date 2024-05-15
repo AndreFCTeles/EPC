@@ -6,8 +6,8 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "electrexparamcompanion",
-    "version": "0.0.0"
+    "productName": "Electrex Param Companion",
+    "version": "0.7.0"
   },
   "tauri": {
     "allowlist": {
@@ -23,7 +23,10 @@
         "writeFile": true,
         "createDir": true,
         "readDir": true,
-        "scope": ["$APPDATA/*"]
+        "scope": [
+          "$APPDATA/*",
+          "$RESOURCE/*"
+        ]
       },
       "dialog": {
         "open": true,
@@ -35,7 +38,7 @@
     },
     "windows": [
       {
-        "title": "electrexparamcompanion",
+        "title": "Electrex Param Companion",
         "resizable": true,
         "width": 800,
         "height": 600
@@ -54,6 +57,9 @@
         "icons/128x128@2x.png",
         "icons/icon.icns",
         "icons/icon.ico"
+      ],
+      "resources": [
+        "assets/banner.png"
       ]
     }
   }
