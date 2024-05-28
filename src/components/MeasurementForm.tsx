@@ -331,7 +331,6 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({initialFiles, onFormSu
             title: 'Successo',
             message: 'Dados guardados com sucesso!',
             color: 'green',
-            // onClose: return to DataTable.tsx component
          });
         form.reset();  // Reset form fields to initial values
         clearFiles();  // Clear file lists and associated data
@@ -365,7 +364,12 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({initialFiles, onFormSu
          else if (selected === null) { 
             console.log('File selection was cancelled.');
             console.log("----------------------------------------------------------------------------------------------------------------");    
-            console.log(" ");           
+            console.log(" ");      
+            showNotification({
+                  title: 'Aviso',
+                  message: 'Seleção de ficheiros cancelada.',
+                  color: 'orange',
+            });     
          } 
          else { handleFiles([selected]); } // Handle a single file as an array         
       } catch (error) { 
@@ -408,7 +412,7 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({initialFiles, onFormSu
    /* |-----| */
 
    return (
-      <form onSubmit={form.onSubmit(handleSubmit)} style={{width: "100%", height: "100%", margin: "0 auto 0 auto", padding: "0 10% 5% 10%"}}>
+      <form onSubmit={form.onSubmit(handleSubmit)} className='measurementForm'>
          
          <Fieldset mt={"sm"}>
             <Grid align="flex-end" grow>

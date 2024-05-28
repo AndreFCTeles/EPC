@@ -90,12 +90,14 @@ export interface JSONMedicao {
    unidades: 'V' | 'A' | string;
 }
 
+// aggregates 'leitura' data to be displayed in a single table row
 export interface AggregatedReading {
    machine: JSONMaquina;
    data_leitura: string;
    readings: JSONLeituraGrupo[];
 }
 
+// fetched data structure for Select input data
 export interface fetchedDataObject {
    value: string;
    label: string;

@@ -16,6 +16,7 @@ mod get_data;
 mod get_json_data;
 mod json_handling;
 mod process_data;
+mod table_elements;
 mod table_generation;
 mod utilities;
 

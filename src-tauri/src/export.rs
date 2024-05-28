@@ -1,15 +1,26 @@
 use crate::data_structures::*;
+use crate::table_elements::*;
 use crate::table_generation::generate_table;
 use rust_xlsxwriter::*;
+use std::collections::{HashMap, HashSet};
 use tauri::api::path::{resolve_path, BaseDirectory};
 use tauri::{AppHandle, Manager};
+
+struct TableInfo {
+    table_index: usize,
+    starting_table_row: u32,
+    final_table_row: u32,
+}
 
 #[tauri::command]
 pub fn create_excel_file(
     data: Vec<Maquina>,
     path: String,
+    image_path: Option<String>,
+    table_style: String,
     app_handle: AppHandle,
 ) -> Result<(), String> {
+    // Logging
     println!("----------------------------------------------------------------------------------------------------------------");
     println!("  ");
     println!("-----------------------");
@@ -21,6 +32,11 @@ pub fn create_excel_file(
     println!("--------------------------");
     println!("  ");
 
+    // ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    // ;;;;;;;;;;;;;;;;;| VARIABLE DECLARATION |;;;;;;;;;;;;;;;;;
+    // ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    // Text Formatting
     let format = Format::new()
         .set_border(FormatBorder::Medium)
         .set_align(FormatAlign::Center);
@@ -39,121 +55,197 @@ pub fn create_excel_file(
     .to_owned();
 
     // Banner Image
-    let image_path = resolve_path(
-        &*app_handle.config(),
-        app_handle.package_info(),
-        &app_handle.env(),
-        "assets/banner.png", // Adjust path as necessary
-        Some(BaseDirectory::Resource),
-    )
-    .map_err(|_| "Failed to resolve image path.".to_string())?
-    .to_str()
-    .ok_or("Failed to convert image path to string".to_string())?
-    .to_owned();
+    // Use provided image path or default banner
 
+    println!("Received image: {:?}", image_path);
+    let final_image_path = if let Some(path) = image_path {
+        if path.is_empty() {
+            resolve_path(
+                &*app_handle.config(),
+                app_handle.package_info(),
+                &app_handle.env(),
+                "assets/banner.png", // Default banner path
+                Some(BaseDirectory::Resource),
+            )
+            .map_err(|_| "Failed to resolve default image path.".to_string())?
+            .to_str()
+            .ok_or("Failed to convert default image path to string".to_string())?
+            .to_owned()
+        } else {
+            path
+        }
+    } else {
+        resolve_path(
+            &*app_handle.config(),
+            app_handle.package_info(),
+            &app_handle.env(),
+            "assets/banner.png", // Default banner path
+            Some(BaseDirectory::Resource),
+        )
+        .map_err(|_| "Failed to resolve default image path.".to_string())?
+        .to_str()
+        .ok_or("Failed to convert default image path to string".to_string())?
+        .to_owned()
+    };
+    println!("Resolved image: {:?}", final_image_path);
+    println!("  ");
+
+    // Parse table style
+    let table_style_enum = match table_style.as_str() {
+        "Medium16" => TableStyle::Medium16,
+        "Light1" => TableStyle::Light1,
+        "Light6" => TableStyle::Light6,
+        // Add more styles as needed
+        _ => TableStyle::Medium16, // default style
+    };
+
+    // Worksheet declaration
     let mut workbook = Workbook::new();
     let worksheet = workbook.add_worksheet();
-    let mut row: u32 = 10;
+    let mut current_row: u32 = 0;
 
     println!("--------------------------");
-    print!("Setting headers... ");
-    // Set the headers
-    let headers = vec![
-        "Nº de Série   ",
-        "DESCRIÇÃO   ",
-        "Vel. do Fio   ",
-        "Leitura Volt.   ",
-        "1) 10'' V   ",
-        "2) 10'' V   ",
-        "3) 10'' V   ",
-        "4) 10'' V   ",
-        "5) 10'' V   ",
-        "Média V   ",
-        "Desvio V   ",
-        "Leitura Amp.   ",
-        "1) 10'' A   ",
-        "2) 10'' A   ",
-        "3) 10'' A   ",
-        "4) 10'' A   ",
-        "5) 10'' A   ",
-        "Média A   ",
-        "Desvio A   ",
-        "Data de leitura   ",
-    ];
-    println!("DONE!");
+    println!(" ");
 
-    if let Err(_) = worksheet.write_row(row, 0, headers.clone()) {
-        return Err("Failed to add the table.".to_string());
-    };
-    row += 1;
+    println!("BUILDING WORKSHEET...");
+    println!("--------------------------");
 
-    let processed_rows = generate_table(worksheet, row, &data, &format)?;
-    row += processed_rows;
+    // ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    // ;;;;;;;;;;;;;;;;;| WORKSHEET BUILDING |;;;;;;;;;;;;;;;;;
+    // ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    let table_columns = headers
-        .iter()
-        .map(|&h| TableColumn::new().set_header(h.to_string())) // Convert each &str to String
-        .collect::<Vec<_>>();
-    let table = Table::new()
-        .set_name("Leituras")
-        .set_style(TableStyle::Medium16)
-        .set_columns(&table_columns); // Use a reference to the new vector of table columns
-    println!(
-        "Trying to add table at row: {}, column: {}, to row: {}, column: {}",
-        10,
-        0,
-        row - 1,
-        headers.len() as u16 - 1
-    );
+    // Extract unique v_fio values
+    let unique_v_fios = extract_unique_v_fios(&data);
+    // Store table information
+    let mut table_info_map: HashMap<usize, TableInfo> = HashMap::new();
+    let mut table_index = 0;
 
-    // Add the table to the worksheet with adjusted columns and rows
-    if let Err(e) = worksheet.add_table(10, 0, row - 1, headers.len() as u16 - 1, &table) {
-        println!("Error adding table: {:?}", e);
-        return Err("Failed to add the table:".to_string());
-    };
+    // Function to create tables
+    fn create_tables(
+        worksheet: &mut Worksheet,
+        data: &[Maquina],
+        format: &Format,
+        current_row: &mut u32,
+        table_info_map: &mut HashMap<usize, TableInfo>,
+        table_index: &mut usize,
+        table_style: TableStyle,
+    ) -> Result<(), String> {
+        let headers = vec![
+            "Nº de Série   ",
+            "DESCRIÇÃO   ",
+            "Vel. do Fio   ",
+            "Leitura Volt.   ",
+            "1) 10'' V   ",
+            "2) 10'' V   ",
+            "3) 10'' V   ",
+            "4) 10'' V   ",
+            "5) 10'' V   ",
+            "Média V   ",
+            "Desvio V   ",
+            "Leitura Amp.   ",
+            "1) 10'' A   ",
+            "2) 10'' A   ",
+            "3) 10'' A   ",
+            "4) 10'' A   ",
+            "5) 10'' A   ",
+            "Média A   ",
+            "Desvio A   ",
+            "Data de leitura   ",
+        ];
 
-    worksheet.autofit();
+        let starting_table_row = *current_row + 10;
 
-    // Nota
-    let format_right = Format::new().set_align(FormatAlign::Right).set_bold();
-    if let Err(_) = worksheet.write_string_with_format(row + 1, 1, "Nota:", &format_right) {
-        return Err("Failed to write Nota.".to_string());
-    };
+        // Write headers
+        worksheet
+            .write_row(starting_table_row, 0, headers.clone())
+            .map_err(|_| "Failed to write headers.".to_string())?;
 
-    // Footers
-    if let Err(_) = worksheet.write(row + 4, 1, "O Coordenador Técnico ATB") {
-        return Err("Failed to add extra Footer1.".to_string());
-    };
-    if let Err(_) = worksheet.write(row + 6, 1, "________________________________") {
-        return Err("Failed to add extra Footer1.".to_string());
-    };
+        // Generate table content and get the number of rows used
+        let processed_rows = generate_table(worksheet, starting_table_row + 1, &data, &format)?;
+        let final_table_row = starting_table_row + 1 + processed_rows;
 
-    // over-headers
-    if let Err(_) = worksheet.write_string_with_format(9, 3, "TENSÃO", &format) {
-        return Err("Failed to add extra Header.".to_string());
-    };
-    if let Err(_) = worksheet.merge_range(9, 4, 9, 10, "LEITURA DA PINÇA MULTIMÉTRICA", &format) {
-        return Err("Failed to add extra Header.".to_string());
-    };
-    if let Err(_) = worksheet.write_string_with_format(9, 11, "CORRENTE", &format) {
-        return Err("Failed to add extra Header.".to_string());
-    };
-    if let Err(_) = worksheet.merge_range(9, 12, 9, 18, "LEITURA DA PINÇA MULTIMÉTRICA", &format)
-    {
-        return Err("Failed to add extra Header.".to_string());
-    };
+        // Name the table uniquely based on table_index
+        let table_name = format!("Table_{}", *table_index + 1);
+        let table_columns = headers
+            .iter()
+            .map(|h| TableColumn::new().set_header(h.to_string()))
+            .collect::<Vec<_>>();
+        let table = Table::new()
+            .set_name(&table_name)
+            .set_style(table_style)
+            .set_columns(&table_columns);
+        worksheet
+            .add_table(
+                starting_table_row,
+                0,
+                final_table_row - 1,
+                headers.len() as u16 - 1,
+                &table,
+            )
+            .map_err(|e| format!("Failed to add the table: {:?}", e))?;
 
-    // After autofit, then add the image and title
-    let image = Image::new(&image_path).map_err(|_| "Failed to load image.".to_string())?;
-    worksheet
-        .insert_image(1, 1, &image) // Adjust row and column as needed
-        .map_err(|_| "Failed to insert image.".to_string())?;
+        // Autofit the columns for the current table data
+        worksheet.autofit();
 
-    let format_titulo = Format::new().set_bold();
-    let titulo = "Verificação/Aferição dos Reóstatos de Regulação dos Parâmetros Eléctricos das Fontes de Energia";
-    if let Err(_) = worksheet.write_string_with_format(7, 1, titulo, &format_titulo) {
-        return Err("Failed to write Titulo.".to_string());
-    };
+        // Store the table information
+        table_info_map.insert(
+            *table_index + 1,
+            TableInfo {
+                table_index: *table_index + 1,
+                starting_table_row,
+                final_table_row,
+            },
+        );
+
+        // Update current_row to the next starting point
+        *current_row = final_table_row + 7; // Adding 2 rows as spacers for next potential table
+        *table_index += 1;
+
+        Ok(())
+    }
+
+    // Create tables for data with v_fio
+    for v_fio in &unique_v_fios {
+        let filtered_data = filter_data_by_v_fio(&data, v_fio);
+        create_tables(
+            worksheet,
+            &filtered_data,
+            &format,
+            &mut current_row,
+            &mut table_info_map,
+            &mut table_index,
+            table_style_enum,
+        )?;
+    }
+
+    // Create tables for data without v_fio
+    let data_without_v_fio = filter_data_without_v_fio(&data);
+    if !data_without_v_fio.is_empty() {
+        create_tables(
+            worksheet,
+            &data_without_v_fio,
+            &format,
+            &mut current_row,
+            &mut table_info_map,
+            &mut table_index,
+            table_style_enum,
+        )?;
+    }
+
+    // Loop through the table information and call the prepare and finalize functions
+    for table_info in table_info_map.values() {
+        prepare_table_elements(
+            worksheet,
+            &final_image_path,
+            table_info.starting_table_row,
+            table_info.table_index,
+        )?;
+        finalize_table_elements(
+            worksheet,
+            table_info.final_table_row,
+            table_info.table_index,
+        )?;
+    }
 
     println!("--------------------------");
     println!("  ");
@@ -167,4 +259,95 @@ pub fn create_excel_file(
     println!("  ");
 
     Ok(())
+}
+
+fn extract_unique_v_fios(data: &[Maquina]) -> HashSet<String> {
+    let mut unique_v_fios = HashSet::new();
+    for machine in data {
+        for leitura in &machine.leituras {
+            for group in &leitura.leitura {
+                if let Some(ref v_fio) = group.v_fio {
+                    unique_v_fios.insert(v_fio.clone());
+                }
+            }
+        }
+    }
+    unique_v_fios
+}
+
+// Filter data by v_fio while keeping all measurement data
+fn filter_data_by_v_fio(data: &[Maquina], v_fio_value: &str) -> Vec<Maquina> {
+    data.iter()
+        .map(|machine| {
+            let filtered_leituras = machine
+                .leituras
+                .iter()
+                .map(|leitura| {
+                    let has_v_fio = leitura
+                        .leitura
+                        .iter()
+                        .any(|group| group.v_fio.as_deref() == Some(v_fio_value));
+
+                    if has_v_fio {
+                        Some(Leitura {
+                            id: leitura.id.clone(),
+                            data_leitura: leitura.data_leitura.clone(),
+                            leitura: leitura.leitura.clone(),
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .filter_map(|leitura| leitura)
+                .collect::<Vec<_>>();
+
+            if !filtered_leituras.is_empty() {
+                Some(Maquina {
+                    n_serie: machine.n_serie.clone(),
+                    maquina: machine.maquina.clone(),
+                    leituras: filtered_leituras,
+                })
+            } else {
+                None
+            }
+        })
+        .filter_map(|machine| machine)
+        .collect::<Vec<_>>()
+}
+
+// Filter data without v_fio
+fn filter_data_without_v_fio(data: &[Maquina]) -> Vec<Maquina> {
+    data.iter()
+        .map(|machine| {
+            let filtered_leituras = machine
+                .leituras
+                .iter()
+                .map(|leitura| {
+                    let has_v_fio = leitura.leitura.iter().any(|group| group.v_fio.is_some());
+
+                    if !has_v_fio {
+                        Some(Leitura {
+                            id: leitura.id.clone(),
+                            data_leitura: leitura.data_leitura.clone(),
+                            leitura: leitura.leitura.clone(),
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .filter_map(|leitura| leitura)
+                .collect::<Vec<_>>();
+
+            if !filtered_leituras.is_empty() {
+                Some(Maquina {
+                    n_serie: machine.n_serie.clone(),
+                    maquina: machine.maquina.clone(),
+                    leituras: filtered_leituras,
+                })
+            } else {
+                None
+            }
+        })
+        .filter_map(|machine| machine)
+        .collect::<Vec<_>>()
 }

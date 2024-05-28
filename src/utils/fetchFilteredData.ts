@@ -5,7 +5,9 @@ async function fetchFilteredData(
    dataType: string,
    clientId?: string,
    maquinaId?: string,
-   selVFio?: string
+   selVFio?: string,
+   tensao?: string,
+   corrente?: string
 ): Promise<any | null> {
    try {
       // Prepare the parameters for the Tauri invoke function
@@ -14,13 +16,14 @@ async function fetchFilteredData(
          clientId:clientId,
          maquinaId:maquinaId,
          selVFio:selVFio
+
       };
       
       // Logging the parameters to be sent to the Rust backend
       console.log(" ");
       console.log("---------------------------------------------------------------------------------");
       console.log("fetchFilteredData received params: ");
-      console.log("dataType:",dataType," clientId", clientId, "maquinaId:", maquinaId, "vFio:", selVFio);
+      console.log("dataType:",dataType," clientId", clientId, "maquinaId:", maquinaId, "vFio:", selVFio, "tensao:", tensao, "corrente:", corrente);
       console.log("Sending parameters:", params);
 
       // Calling the Tauri invoke function with the command name and parameters

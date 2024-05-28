@@ -89,6 +89,71 @@ button {
   margin-right: 5px;
 }
 
+.ConSel {
+  max-width: 150px;
+}
+
+.mantine-Drawer-body {
+  width: 100%;
+  height: 80%;
+}
+
+.radio,
+.mantine-Radio-radio {
+  outline-offset: -2px;
+  padding: 0;
+}
+
+.mantine-Modal-header,
+.mantine-Drawer-header {
+  background-color: #228be6;
+  font-weight: bold;
+  color: #C0C0C0;
+}
+
+.mantine-Modal-title,
+.mantine-Drawer-title {
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.mantine-Modal-close,
+.mantine-Drawer-close {
+  color: #FFF;
+}
+
+.mantine-Modal-close:hover,
+.mantine-Drawer-close:hover {
+  background-color: #82c0f7;
+}
+
+.dmIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.measurementForm {
+  width: 100%;
+  height: 100%;
+  margin: 0 auto 0 auto;
+  padding: 0 10% 5% 10%;
+}
+
+.dataTable {
+  white-space: nowrap;
+}
+
+.imagePreviewContainer {
+  border: 2px solid #C0C0C0;
+  border-radius: 7px
+}
+
+.imagePreview {
+  background-color: #FFF;
+  padding: 10px;
+  border-radius: 5px
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color: #f6f6f6;
@@ -108,8 +173,4 @@ button {
   button:active {
     background-color: #0f0f0f69;
   }
-}
-
-.ConSel {
-  max-width: 150px;
 }
