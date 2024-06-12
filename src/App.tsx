@@ -20,13 +20,13 @@ import {
 import { IconSun, IconMoonStars } from '@tabler/icons-react';
 // Tauri
 import { listen } from '@tauri-apps/api/event';
-// Componentes
+// Components
 import MeasurementForm from './components/MeasurementForm';
 import DataTable from './components/DataTable';
 
-/* |------------| */
-/* | COMPONENTE | */
-/* |------------| */
+/* |-----------| */
+/* | COMPONENT | */
+/* |-----------| */
 
 const App: React.FC = () => {
    // States
@@ -35,8 +35,10 @@ const App: React.FC = () => {
    const [formSubmitted, setFormSubmitted] = useState<boolean>(false);
    const {setColorScheme} = useMantineColorScheme()
    const userColorScheme = useComputedColorScheme();
-   const theme = useMantineTheme();
+   const [isDarkMode, setIsDarkMode] = useState<boolean>(userColorScheme === 'dark');
+   const theme = useMantineTheme();   
 
+   // Component declarations
    const sunIcon = (
       <IconSun
       className='dmIcon'
@@ -49,25 +51,26 @@ const App: React.FC = () => {
       stroke={2.5}
       color={theme.colors.blue[6]} />
    );
-
    const appShellHeader = { height:60 };
    const appShellNavbar = { width: {sm: 200, md: 200, lg: 200}, breakpoint: 'sm' }
 
    
-   /* |--------| */
-   /* | LÓGICA | */
-   /* |--------| */
+   /* |-------| */
+   /* | LOGIC | */
+   /* |-------| */
 
    
    const handleColorSchemeToggle = () => {
-      setColorScheme(userColorScheme === "dark" ? "light" : "dark" );
+      setColorScheme(userColorScheme === "dark" ? "light" : "dark" );      
+      setIsDarkMode(!isDarkMode);
    };
+   
 
    const handleFormSubmit = () => {
       setFormSubmitted(true); // Set form as submitted
    };
 
-   // Detetar drag-drop para mudar componente
+   // Detect drag and drop to change component
    useEffect(() => {
       // Set up a global listener for drag-and-drop events
       const unsubscribe = listen('tauri://file-drop', async (event) => {
@@ -82,6 +85,11 @@ const App: React.FC = () => {
       return () => { unsubscribe.then(fn => fn()); };
    }, []);
 
+    // Update the switch state when the application loads
+   useEffect(() => {
+      setIsDarkMode(userColorScheme === 'dark');
+   }, [userColorScheme]);
+
 
    useEffect(() => {
       let timer:number;
@@ -94,7 +102,6 @@ const App: React.FC = () => {
       }
       return () => clearTimeout(timer);
    }, [formSubmitted]);
-
 
 
 
@@ -135,6 +142,7 @@ const App: React.FC = () => {
                   </Box>
                   <Flex w={"100%"} px={"auto"}>
                      <Switch 
+                     checked={isDarkMode}
                      onChange={handleColorSchemeToggle} 
                      onLabel={sunIcon} 
                      offLabel={moonIcon}

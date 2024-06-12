@@ -23,59 +23,36 @@ import { showNotification } from '@mantine/notifications';
 import { useForm } from '@mantine/form';
 // Tauri
 import { invoke } from '@tauri-apps/api/tauri';
-//import { listen } from '@tauri-apps/api/event'; - moved to app.tsx
 import { open } from '@tauri-apps/api/dialog';
 // DayJS
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt';
 dayjs.locale('pt');
 // Utils
-import { FileWithContentAndCheck, SetFilesFunction } from '../utils/types';
 import processCsvFiles from '../utils/processCsv';
 import aggregateData from '../utils/aggregateFormData';
 import fetchData from '../utils/fetchdata';
+import { 
+   fetchedDataObject, 
+   FileWithContentAndCheck, 
+   SetFilesFunction, 
+   MeasureFormData, 
+   MeasurementFormProps 
+} from '../utils/types';
 
 
 
 
 
-/* |------------| */
-/* | INTERFACES | */
-/* |------------| */
 
-// Submitting
-interface MeasureFormData {
-   cliente: string;
-   maquina: string;
-   nSerie: string;
-   tensaoA?: number | string;
-   tensaoV?: number | string;
-   vFio?: number | string;
-   data?: Date | string;
-}
-// Fetching
-interface fetchedDataObject {
-   value: string;
-   label: string;
-}
-// Drag-drop Files
-interface MeasurementFormProps {
-   initialFiles: string[];
-   onFormSubmit: () => void;
-}
-
-
-
-
-
-/* |------------| */
-/* | COMPONENTE | */
-/* |------------| */
+/* |-----------| */
+/* | COMPONENT | */
+/* |-----------| */
 
 const MeasurementForm: React.FC<MeasurementFormProps> = ({initialFiles, onFormSubmit}) => {
-   /* |---------| */
-   /* | ESTADOS | */
-   /* |---------| */
+   /* |--------| */
+   /* | STATES | */
+   /* |--------| */
    
    // Date
    const dataAgora = new Date();
@@ -393,16 +370,13 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({initialFiles, onFormSu
    // Effect for drag-drop
    useEffect(() => { handleFiles(initialFiles); }, [initialFiles]);
 
-   // Effect for fetching
+   // Effect for fetching initial data
    useEffect(() => {
-      // TODO: FILTRAR FETCHING MAQUINAS E NSERIE
-      // Fetch clientes
       fetchData('selClientes').then((data) => { setSelClientes(data.map((slecli: fetchedDataObject) => slecli.label)); });
-      // Fetch maquinas
       fetchData('selMaquinas').then((data) => { setSelMaquinas(data.map((selmaq: fetchedDataObject) => selmaq.label)); });
-      // Fetch series -- assuming you have a similar setup for series
       fetchData('selNSerie').then((data: string[]) => { setSelNSerie(data.map((selns:string) => selns)); });
    }, []);
+
 
 
 

@@ -6,6 +6,7 @@
 
   color: #0f0f0f;
   background-color: #f6f6f6;
+  transition: background-color 1s;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;

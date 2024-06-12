@@ -18,38 +18,39 @@ import {
    Radio,
    Text,
    Image,
-   Fieldset
+   Fieldset,
+   Tooltip
 } from '@mantine/core';
 import { showNotification } from '@mantine/notifications';
 import { useDisclosure } from '@mantine/hooks';
+import { IconDownload } from '@tabler/icons-react';
 // Tauri
 import { save, open } from '@tauri-apps/api/dialog';
-import { invoke, convertFileSrc} from '@tauri-apps/api/tauri';
+import { invoke, convertFileSrc } from '@tauri-apps/api/tauri';
 // Utils
 import {JSONCliente, fetchedDataObject } from '../utils/types'
 import fetchFilteredData from '../utils/fetchFilteredData';
 import fetchFullClientData from '../utils/fetchAllData';
+import { SelectedItems, SelectedStyle } from '../utils/types';
 // Assets
-import banner from "../assets/banner.png"
-import Light1 from "../assets/Light1.jpg"
-import Light6 from "../assets/Light6.jpg"
-import Medium16 from "../assets/Medium16.jpg"
-
-interface SelectedItems { [key: string]: boolean; }
-interface SelectedStyle { [key: string]: string; }
+import banner from "../assets/banner.png";
+import Light1 from "../assets/Light1.jpg";
+import Light6 from "../assets/Light6.jpg";
+import Medium16 from "../assets/Medium16.jpg";
 
 
 
 
 
-/* |------------| */
-/* | COMPONENTE | */
-/* |------------| */
+
+/* |-----------| */
+/* | COMPONENT | */
+/* |-----------| */
 
 const DataTable: React.FC = () => {
-   /* |---------| */
-   /* | ESTADOS | */
-   /* |---------| */
+   /* |--------| */
+   /* | STATES | */
+   /* |--------| */
    
    // Data states
    const [selCliId, setSelCliId] = useState<string | null>(null);
@@ -131,7 +132,7 @@ const DataTable: React.FC = () => {
             if (!voltageGroup || !ampereGroup) {                
                showNotification({
                   title: 'Erro',
-                  message: 'Erro ao guardar dados. Contacte o administrador ou tente outra vez.',
+                  message: 'Dados não encontrados.',
                   color: 'red',
                });
                return null; 
@@ -384,7 +385,6 @@ const DataTable: React.FC = () => {
 
 
 
-   // 
    const handleExport = async (selectedImage: string, selectedStyle: string) => {
       setSelectedImage(selectedImage);
       setSelectedStyle(selectedStyle);
@@ -408,7 +408,14 @@ const DataTable: React.FC = () => {
 
             // Return the machine object with only the selected leituras if there are any
             if (filteredLeituras.length > 0) { return [{ ...machine, leituras: filteredLeituras }]; } 
-            else { return []; } // Return an empty array if no leituras are selected
+            else { 
+               showNotification({
+                  title: 'Erro',
+                  message: 'Erro ao selecionar ficheiros.',
+                  color: 'red',
+               });
+               return []; 
+            } // Return an empty array if no leituras are selected
          });
          console.log("selectedItems:", selectedItems);
          if (!selectedData || selectedData.length === 0) throw new Error("No data selected");
@@ -561,7 +568,20 @@ const DataTable: React.FC = () => {
                )}
             </Group>
 
-            <Button maw={200} ml={"xs"} onClick={openModal}>Exportar selecionados</Button>
+            
+            <Tooltip 
+            label="Selecione leituras para continuar"
+            openDelay={500}
+            transitionProps={{ transition: 'slide-up', duration: 300 }}
+            events={{ hover:(!someChecked && !allChecked), focus:false, touch:false }}>
+               <Button 
+               maw={200} 
+               ml={"xs"} 
+               onClick={openModal} 
+               disabled={!someChecked && !allChecked}
+               rightSection={<IconDownload size={14} />}
+               >Exportar selecionados</Button>               
+            </Tooltip>
 
             <ScrollArea offsetScrollbars >
                <Table 
