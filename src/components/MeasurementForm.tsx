@@ -16,7 +16,8 @@ import {
    Table,
    Combobox, 
    InputBase, 
-   useCombobox
+   useCombobox,
+   Container
 } from '@mantine/core'
 import { DatesProvider, DateTimePicker } from '@mantine/dates';
 import { showNotification } from '@mantine/notifications';
@@ -387,8 +388,8 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({initialFiles, onFormSu
 
    return (
       <form onSubmit={form.onSubmit(handleSubmit)} className='measurementForm'>
-         
-         <Fieldset mt={"sm"}>
+         <Container h={'xs'} />
+         <Fieldset legend='Nova Medição'>
             <Grid align="flex-end" grow>
                <Grid.Col span={{ base: 12, md: 6 }}>   
                   <Combobox

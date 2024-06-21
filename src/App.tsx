@@ -8,7 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { 
    AppShell, 
    Button, 
-   Title,
+   //Title,
    Flex,
    Box,
    Switch,
@@ -51,7 +51,7 @@ const App: React.FC = () => {
       stroke={2.5}
       color={theme.colors.blue[6]} />
    );
-   const appShellHeader = { height:60 };
+   const appShellHeader = { height:0 }; // anteriormente 60
    const appShellNavbar = { width: {sm: 200, md: 200, lg: 200}, breakpoint: 'sm' }
 
    
@@ -118,9 +118,7 @@ const App: React.FC = () => {
          navbar={appShellNavbar}
          >
 
-            <AppShell.Header p={"xs"}>  
-               <Title order={2} ml={0}>Param Companion</Title> 
-            </AppShell.Header>
+            {/*<AppShell.Header p={"xs"}><Title order={2} ml={0}>Param Companion</Title></AppShell.Header>*/}
 
             <AppShell.Navbar p={"sm"}>
                
